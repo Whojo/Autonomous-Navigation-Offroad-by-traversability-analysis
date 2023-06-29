@@ -60,8 +60,8 @@ import rospy
 import tf.transformations
 
 # Custom modules and packages
-import utils.drawing as dw
-import utils.frames as frames
+import utilities.drawing as dw
+import utilities.frames as frames
 from depth.utils import Depth
 import traversalcost.utils
 import traversalcost.traversal_cost
@@ -828,17 +828,15 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="multimodal_siamese_png")
+    dataset = DatasetBuilder(name="Terrains_Sample")
     
     dataset.write_images_and_compute_features(
         files=[
-            # "bagfiles/raw_bagfiles/Terrains_Samples/road_easy.bag"
-            # "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_medium.bag"
-            # "bagfiles/raw_bagfiles/Terrains_Samples/sand_hard.bag"
-            # "bagfiles/raw_bagfiles/ENSTA_Campus/tom_2023-05-30-13-59-18_0.bag",
-            "bagfiles/raw_bagfiles/ENSTA_Campus/",
-            "bagfiles/raw_bagfiles/Palaiseau_Forest/",
-            # "bagfiles/raw_bagfiles/Troche/",
+            "bagfiles/raw_bagfiles/ENSTA_Campus/tom_2023-05-30-13-49-34_2.bag",
+            #"bagfiles/raw_bagfiles/Terrains_Samples/forest_2023-05-30-14-13-28_0.bag",
+            #"bagfiles/raw_bagfiles/ENSTA_Campus/",
+            #"bagfiles/raw_bagfiles/Palaiseau_Forest/",
+            #"bagfiles/raw_bagfiles/Troche/",
         ])
 
     dataset.write_traversal_costs()

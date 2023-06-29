@@ -450,7 +450,7 @@ if __name__ == "__main__":
         # "bagfiles/raw_bagfiles/speed_dependency/road.bag",
         # "bagfiles/raw_bagfiles/speed_dependency/sand.bag",
         # "bagfiles/raw_bagfiles/Terrains_Samples/"
-        "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves_branches.bag"
+        # "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves_branches.bag"
     ]
     
     # Choose between manual labeling or labeling from a csv file

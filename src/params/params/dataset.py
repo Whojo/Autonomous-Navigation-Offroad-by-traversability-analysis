@@ -64,7 +64,7 @@ FEATURES = {"function": traversalcost.features.wrapped_signal_fft,
 #-------------------#
 
 # Path to the parameters file
-SIAMESE_PARAMS = "src/traversal_cost/siamese_network/logs/_2023-06-12-19-33-37/siamese.params"
+SIAMESE_PARAMS = "src/traversal_cost/siamese_network/logs/_2023-06-21-11-38-20/siamese.params"
 
 # Use GPU if available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
