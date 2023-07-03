@@ -46,7 +46,7 @@ def train(model: nn.Module,
         traversal_costs,\
         traversability_labels,\
         linear_velocities in train_loader_pbar:
-        
+
         # Print the epoch and training mode
         train_loader_pbar.set_description(f"Epoch {epoch} [train]")
         
@@ -54,11 +54,12 @@ def train(model: nn.Module,
         images = images.to(device)
         traversal_costs = traversal_costs.to(device)
         traversability_labels = traversability_labels.to(device)
+        
         linear_velocities = linear_velocities.type(torch.float32).to(device)
         
         # Add a dimension to the linear velocities tensor
         linear_velocities.unsqueeze_(1)
-        
+
         # Zero out gradients before each backpropagation pass, to avoid that
         # they accumulate
         optimizer.zero_grad()

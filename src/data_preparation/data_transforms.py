@@ -16,7 +16,7 @@ from torchvision import transforms
 if __name__ == "__main__":
     # Open the first image of the sample dataset
     image = Image.open(
-        "datasets/dataset_tom_path_grass/zed_node_rgb_image_rect_color/00000.png")
+        "/home/gabriel/PRE/datasets/dataset_multimodal_siamese_png/images/00000.png")
     # image = Image.open(
     #     "datasets/dataset_sample_bag/zed_node_rgb_image_rect_color/00000.png")
     
