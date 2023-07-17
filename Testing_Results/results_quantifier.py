@@ -21,7 +21,7 @@ from params import dataset
 import utilities.frames as frames
 import visualparams as viz
 
-results_dir = "/home/gabriel/PRE/Testing_Results/ResNet18Velocity/"
+results_dir = "/home/gabriel/PRE/Testing_Results/ResNet18Velocity_Regression/"
 input_dir ="/home/gabriel/PRE/bagfiles/images_extracted/"
 
 IMAGE_W = 1920
@@ -43,6 +43,8 @@ model.eval()
 
 midpoints = viz.MIDPOINTS
 VELOCITY = 1.0
+
+print(viz.WEIGHTS)
 
 def get_corners(x, y) :
     """
@@ -226,7 +228,11 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
 
                     # Computing the cost from the classification problem with the help of midpoints
                     output = model(multimodal_image, velocity)
-                    print(output)
+                    
+                    # Case Regression
+                    #cost = output.cpu()[0]
+                    
+                    # Case Classification
                     softmax = nn.Softmax(dim=1)
                     output = softmax(output)
                     output = output.cpu()[0]
@@ -234,7 +240,7 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
                     cost = np.dot(probs, np.transpose(midpoints))
                     
                     #Filling the output array (the numeric costmap)
-                    costmap[y,x] = cost
+                    costmap[y,x] = cost.item()
                     if cost < min_cost :
                         min_cost = cost
                     elif cost > max_cost :
@@ -333,16 +339,18 @@ def display(img, costmap, costmap_by_hand, rectangle_list, grid_list, max_cost, 
     result_bis = np.vstack((costmapviz_hand, costmapviz_diff))
 
     result = np.hstack((result, result_bis))
-
     result = cv2.resize(result, (1792,1008))
 
     cv2.imshow("Result", result)
+    writer.write(result)
     cv2.waitKey(0)
 
 files = np.load(input_dir + "files.npy")
 number_files = len(files)
 
 rectangle_list, grid_list = get_lists()
+
+writer = cv2.VideoWriter("/home/gabriel/PRE/Testing_Results/output.avi", cv2.VideoWriter_fourcc(*'XVID'), 0.5, (1792,1008))
 
 for i in range(number_files) :
     name = files[i]
@@ -358,3 +366,5 @@ for i in range(number_files) :
     min_cost = np.min([min_cost, np.min(costmap_by_hand)])
 
     display(img, costmap, costmap_by_hand, rectangle_list, grid_list, max_cost, min_cost)
+
+writer.release()

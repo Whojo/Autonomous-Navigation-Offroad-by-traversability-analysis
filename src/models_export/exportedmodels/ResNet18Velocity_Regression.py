@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision import models
+from torchvision import models, transforms
+import params
 
-# Import custom packages
-import params.learning
+NORMALIZE_PARAMS = params.learning.NORMALIZE_PARAMS
 
 
 class ResNet18Velocity_Regression(nn.Module):

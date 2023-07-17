@@ -15,8 +15,8 @@ TEST_SIZE = 0.15
 
 # Set learning parameters
 LEARNING = {"batch_size": 32,
-            "nb_epochs": 20,
-            "learning_rate": 1e-4,
+            "nb_epochs": 40,
+            "learning_rate": 1e-6,
             "weight_decay": 0.001,
             "momentum": 0.9}
 
@@ -46,7 +46,7 @@ NORMALIZE_PARAMS = {"rbg": {"mean": torch.tensor([0.4710, 0.5030, 0.4580]),
 # Set the parameters for the network
 NET_PARAMS = {"nb_input_channels": 7,
               "nb_input_features": 1,
-              "nb_classes": 1}
+              "nb_classes": 10}
 
 
 #######################################
