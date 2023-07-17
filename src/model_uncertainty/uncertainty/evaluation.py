@@ -11,9 +11,7 @@ import params.learning
 
 def uncertainty_relevance(model: torch.nn.Module,
                           device: str,
-                          criterion_classification: torch.nn.Module,
                           criterion_regression: torch.nn.Module,
-                          bins_midpoints: np.ndarray,
                           uncertainty_function: callable,
                           test_function: callable,
                           test_set: torch.utils.data.Dataset,
@@ -128,9 +126,7 @@ def uncertainty_relevance(model: torch.nn.Module,
         test_regression_loss_loss = test_function(model, 
                                                   device,
                                                   test_loader_loss,
-                                                  criterion_classification,
                                                   criterion_regression,
-                                                  bins_midpoints,
                                                   uncertainty_function)[2]
         # Test the model on the new test dataset without the samples with the
         # largest uncertainties
@@ -138,9 +134,7 @@ def uncertainty_relevance(model: torch.nn.Module,
             model,
             device,
             test_loader_uncertainty,
-            criterion_classification,
             criterion_regression,
-            bins_midpoints,
             uncertainty_function)[2]
 
         # Append the test loss to the list

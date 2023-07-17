@@ -27,4 +27,4 @@ colors = {
 NB_BINS = 10
 
 # Set the binning strategy
-BINNING_STRATEGY = "kmeans"
+BINNING_STRATEGY = "quantile"

@@ -22,9 +22,7 @@ def squared_error(predicted_costs: torch.Tensor,
 def test(model: nn.Module,
          device: str,
          test_loader: torch.utils.data.DataLoader,
-         criterion_classification: nn.Module,
          criterion_regression: nn.Module,
-         bins_midpoints: np.ndarray,
          uncertainty_function: callable) -> tuple:
     """Test the model on the test set
 
@@ -49,26 +47,21 @@ def test(model: nn.Module,
     """
 
     # Testing
-    test_loss = 0.
-    test_correct = 0
     test_regression_loss = 0.
 
     # Configure the model for testing
     model.eval()
 
     test_regression_losses = []
-    uncertainties = []
 
     with torch.no_grad():
         # Loop over the testing batches
         for images,\
             traversal_costs,\
-            traversability_labels,\
             linear_velocities in test_loader:
 
             images = images.to(device)
             traversal_costs = traversal_costs.to(device)
-            traversability_labels = traversability_labels.to(device)
             linear_velocities =\
                 linear_velocities.type(torch.float32).to(device)
 
@@ -76,55 +69,23 @@ def test(model: nn.Module,
             linear_velocities.unsqueeze_(1)
             
             # Perform forward pass
-            predicted_traversability_labels = model(images, linear_velocities)
+            predicted_traversability_score = model(images, linear_velocities)
 
-            # Compute loss
-            loss = criterion_classification(predicted_traversability_labels,
-                                            traversability_labels)
-            
-            # Accumulate batch loss to average of the entire testing set
-            test_loss += loss.item()
-
-            # Get the number of correct predictions
-            test_correct +=\
-                torch.sum(
-                    torch.argmax(
-                        predicted_traversability_labels, dim=1) == traversability_labels
-                ).item()
-
-            # Apply the softmax function to the predicted traversability labels
-            probabilities = nn.Softmax(dim=1)(predicted_traversability_labels)
-
-            # Compute the expected traversal cost over the bins
-            expected_traversal_costs = torch.matmul(probabilities,
-                                                    bins_midpoints)
-            
             # Compute and accumulate the batch loss
             test_regression_loss += criterion_regression(
-                expected_traversal_costs[:, 0],
+                predicted_traversability_score,
                 traversal_costs).item()
 
             # Compute the loss for each sample
             test_regression_losses.append(
-                squared_error(expected_traversal_costs[:, 0],
+                squared_error(predicted_traversability_score,
                               traversal_costs).to("cpu"))
-            
-            # Compute the uncertainty
-            uncertainties.append(
-                uncertainty_function(probabilities).to("cpu"))
 
     # Compute the loss and accuracy
-    test_loss /= len(test_loader)
-    test_accuracy = 100*test_correct/len(test_loader.dataset)
-    
-    # Compute the regression loss
     test_regression_loss /= len(test_loader)
    
-    return test_loss,\
-           test_accuracy,\
-           test_regression_loss,\
-           test_regression_losses,\
-           uncertainties
+    return test_regression_loss,\
+           test_regression_losses
 
 
 def test_models(models: list,

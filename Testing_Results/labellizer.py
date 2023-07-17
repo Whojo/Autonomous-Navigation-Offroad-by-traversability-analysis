@@ -242,9 +242,11 @@ def display(img, costmap, rectangle_list, grid_list, max_cost, min_cost) :
 
 directory = "/home/gabriel/PRE/bagfiles/images_extracted/"
 
-number_files = len([name for name in os.listdir("/home/gabriel/PRE/bagfiles/images_extracted/") if os.path.isfile(directory + name)])//3
+number_files = len([name for name in os.listdir("/home/gabriel/PRE/bagfiles/images_extracted/") if os.path.isfile(directory + name) and name.lower().endswith('.png')])//3
 
 files = np.array([directory + f"{i+1}.png" for i in range(number_files)])
+
+print(files)
 
 np.save("/home/gabriel/PRE/bagfiles/images_extracted/files", files)
 
@@ -260,9 +262,9 @@ rectangle_list, grid_list = get_lists()
 
 #choices = np.random.choice(number_files, 4)
 
-for i in range(number_files) :
-    img = cv2.imread(files[i])
-    costmap = np.load(f"/home/gabriel/PRE/bagfiles/images_extracted/costmaps{i+1}.npy")
-    display(img, costmap, rectangle_list, grid_list, np.max(costmap), np.min(costmap))
+#for i in range(number_files) :
+#    img = cv2.imread(files[i])
+#    costmap = np.load(f"/home/gabriel/PRE/bagfiles/images_extracted/costmaps{i+1}.npy")
+#    display(img, costmap, rectangle_list, grid_list, np.max(costmap), np.min(costmap))
 
 

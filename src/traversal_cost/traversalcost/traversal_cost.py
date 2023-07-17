@@ -230,8 +230,6 @@ def apply_model(features, model, params, device):
     costs = costs.numpy()
     
     return costs
-    
-
 
 # Main program
 # The "__main__" flag acts as a shield to avoid these lines to be executed if

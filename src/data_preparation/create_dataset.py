@@ -491,10 +491,15 @@ class DatasetBuilder():
                         
                         # Extract the rectangular region of interest from
                         # the original image
+
                         image_to_save = image[min_y_rectangle:max_y_rectangle,
                                               min_x_rectangle:max_x_rectangle]
                         
-                        # cv2.imshow("rgb", image_to_save)
+                        if image_to_save.size == 0 :
+                            break
+                        
+                        #cv2.imshow("rgb", image_to_save)
+                        #cv2.waitKey(0)
                         
                         # Convert the image from BGR to RGB
                         image_to_save = cv2.cvtColor(image_to_save,
@@ -828,15 +833,16 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="Terrains_Sample")
+    dataset = DatasetBuilder(name="dataset_multimodal_siamese_png_quantilebinning")
     
     dataset.write_images_and_compute_features(
         files=[
-            "bagfiles/raw_bagfiles/ENSTA_Campus/tom_2023-05-30-13-49-34_2.bag",
-            #"bagfiles/raw_bagfiles/Terrains_Samples/forest_2023-05-30-14-13-28_0.bag",
-            #"bagfiles/raw_bagfiles/ENSTA_Campus/",
-            #"bagfiles/raw_bagfiles/Palaiseau_Forest/",
-            #"bagfiles/raw_bagfiles/Troche/",
+            "bagfiles/raw_bagfiles/Terrains_Samples/",
+            "bagfiles/raw_bagfiles/ENSTA_Campus/",
+            "bagfiles/raw_bagfiles/Palaiseau_Forest/",
+            "bagfiles/raw_bagfiles/Troche/",
+
+            #"bagfiles/raw_bagfiles/ENSTA_Campus/tom_2023-05-30-14-02-18_6.bag"
         ])
 
     dataset.write_traversal_costs()
