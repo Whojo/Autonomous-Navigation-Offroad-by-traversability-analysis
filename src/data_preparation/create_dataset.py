@@ -833,16 +833,18 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="dataset_multimodal_siamese_png_quantilebinning")
+    dataset = DatasetBuilder(name="dataset_road_grass_branches")
     
     dataset.write_images_and_compute_features(
         files=[
-            "bagfiles/raw_bagfiles/Terrains_Samples/",
-            "bagfiles/raw_bagfiles/ENSTA_Campus/",
-            "bagfiles/raw_bagfiles/Palaiseau_Forest/",
-            "bagfiles/raw_bagfiles/Troche/",
+            #"bagfiles/raw_bagfiles/Terrains_Samples/",
+            #"bagfiles/raw_bagfiles/ENSTA_Campus/",
+            #"bagfiles/raw_bagfiles/Palaiseau_Forest/",
+            #"bagfiles/raw_bagfiles/Troche/",
 
-            #"bagfiles/raw_bagfiles/ENSTA_Campus/tom_2023-05-30-14-02-18_6.bag"
+            "bagfiles/raw_bagfiles/Terrains_Samples/troche_forest_hard_2023-05-30-13-44-49_0.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
         ])
 
     dataset.write_traversal_costs()

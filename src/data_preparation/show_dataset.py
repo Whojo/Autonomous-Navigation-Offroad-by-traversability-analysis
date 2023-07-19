@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont  # Image processing
 from tqdm import tqdm  # Progress bar
 
 
-DATASET = "datasets/dataset_multimodal_siamese2/"
+DATASET = "datasets/dataset_dataset_road_grass_branches/"
 
 # Read the csv file containing image names and
 # associated pitch velocity variance measurements

@@ -362,6 +362,7 @@ for i in range(number_files) :
     costmap_by_hand = np.load(input_dir + f"costmaps{i+1}.npy")
 
     costmap, min_cost, max_cost = predict_costs(img, img_depth, img_normal, rectangle_list, model)
+    print(np.mean(costmap[np.where(costmap != 0)]))
     max_cost = np.max([max_cost, np.max(costmap_by_hand)])
     min_cost = np.min([min_cost, np.min(costmap_by_hand)])
 
