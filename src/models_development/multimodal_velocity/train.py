@@ -7,6 +7,7 @@ def train(model: nn.Module,
           device: str,
           train_loader: torch.utils.data.DataLoader,
           optimizer: torch.optim.Optimizer,
+          scheduler: torch.optim.lr_scheduler,
           criterion_classification: nn.Module,
           criterion_regression: nn.Module,
           bins_midpoints: torch.Tensor,
@@ -97,6 +98,8 @@ def train(model: nn.Module,
         train_regression_loss += criterion_regression(
             expected_traversal_costs[:, 0],
             traversal_costs).item()
+        
+    scheduler.step()
     
     # Compute the losses and accuracies
     train_loss /= len(train_loader)

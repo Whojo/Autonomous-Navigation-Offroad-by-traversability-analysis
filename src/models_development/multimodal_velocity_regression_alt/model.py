@@ -7,14 +7,14 @@ from torchvision import models
 import params.learning
 
 
-class ResNet18Velocity(nn.Module):
+class ResNet18Velocity_Regression_Alt(nn.Module):
     
     def __init__(self,
-                 nb_classes=10,
+                 nb_classes=1,
                  nb_input_features=1,
                  nb_input_channels=7):
         
-        super(ResNet18Velocity, self).__init__()
+        super(ResNet18Velocity_Regression_Alt, self).__init__()
         
         self.nb_input_channels = nb_input_channels
         
@@ -34,8 +34,9 @@ class ResNet18Velocity(nn.Module):
             bias=False
         )
         # Replace the last fully-connected layer to have n classes as output
-        self.resnet18.fc = nn.Linear(self.resnet18.fc.in_features+1, 256)
+        self.resnet18.fc = nn.Linear(self.resnet18.fc.in_features, 256)
         self.fc = nn.Linear(256, nb_classes)
+        self.fc_speed = nn.Linear(1, self.resnet18.fc.in_features)
         
         ## Numeric input processing ##
         # self.mlp = nn.Sequential(
@@ -89,14 +90,17 @@ class ResNet18Velocity(nn.Module):
         # print(x.shape)
         x = x.view(x.size(0), -1)
         
-        x = torch.cat((x, x_dense), dim=1)
-        # mult here
+        #x = torch.cat((x, x_dense), dim=1)
         # print(x.shape)
+        x_speed = self.fc_speed(x_dense)
+        x = x * x_speed
         
         x = self.resnet18.fc(x)
-        
+
         x = F.relu(x)
         
         x = self.fc(x)
+
+        x = torch.flatten(x)
         
         return x

@@ -397,7 +397,30 @@ class DatasetBuilder():
                     
                         # Draw the points on the image
                         # image = dw.draw_points(image, points_image)
+
+                        #Check if the velocity on the patch means something coherent : i.e. if the robot is not doing a round trip or other black magic.
+                        x_velocity_array = np.array(x_velocity)
+
+                        #coherence = np.all(np.isclose(x_velocity, np.full(len(x_velocity), np.mean(x_velocity)), rtol=0.15))
                         
+                        qup, qdown = np.percentile(x_velocity_array, [90, 10])
+                        q_thresh = 0.12
+                        coherence = (qdown > np.mean(x_velocity)*(1.0-q_thresh)) and (qup < np.mean(x_velocity)*(1.0+q_thresh))
+
+                        cohesion = (np.all(x_velocity_array > 0) if x_velocity_array[0] > 0 else np.all(x_velocity_array < 0))
+
+                        if (not coherence) or (not cohesion) :
+                            
+                            # Reset velocities
+                            x_velocity = []
+
+                            # Update the old values
+                            point_world_old = point_world
+                            points_image_old = points_image
+                            t_odom_old = t_odom
+                            
+                            continue
+
                         # Compute the inclination of the patch in the image
                         delta_old = np.abs(points_image_old[0] - points_image_old[1])
                         delta_current = np.abs(points_image[0] - points_image[1])
@@ -715,6 +738,8 @@ class DatasetBuilder():
         #            "image_timestamp"]  #TODO:
         file_costs_writer.writerow(headers)
         
+        print(self.velocities, self.features)
+
         costs, labels = self.compute_traversal_costs()
         # costs, labels, slip_costs = self.compute_traversal_costs()
         
@@ -833,7 +858,7 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="road_grass")
+    dataset = DatasetBuilder(name="road_filtered")
     
     dataset.write_images_and_compute_features(
         files=[
@@ -844,7 +869,8 @@ if __name__ == "__main__":
 
             #"bagfiles/raw_bagfiles/Terrains_Samples/troche_forest_hard_2023-05-30-13-44-49_0.bag",
             "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
+            "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-14-05-20_0.bag"
+            #"bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
         ])
 
     dataset.write_traversal_costs()

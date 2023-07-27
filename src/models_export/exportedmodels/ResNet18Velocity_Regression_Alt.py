@@ -1,20 +1,22 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision import models
+from torchvision import models, transforms
+import params
 
 # Import custom packages
 import params.learning
 
+NORMALIZE_PARAMS = params.learning.NORMALIZE_PARAMS
 
-class ResNet18Velocity(nn.Module):
+class ResNet18Velocity_Regression_Alt(nn.Module):
     
     def __init__(self,
-                 nb_classes=10,
+                 nb_classes=1,
                  nb_input_features=1,
                  nb_input_channels=7):
         
-        super(ResNet18Velocity, self).__init__()
+        super(ResNet18Velocity_Regression_Alt, self).__init__()
         
         self.nb_input_channels = nb_input_channels
         
@@ -34,7 +36,7 @@ class ResNet18Velocity(nn.Module):
             bias=False
         )
         # Replace the last fully-connected layer to have n classes as output
-        self.resnet18.fc = nn.Linear(self.resnet18.fc.in_features+1, 256)
+        self.resnet18.fc = nn.Linear(self.resnet18.fc.in_features, 256)
         self.fc = nn.Linear(256, nb_classes)
         
         ## Numeric input processing ##
@@ -89,14 +91,68 @@ class ResNet18Velocity(nn.Module):
         # print(x.shape)
         x = x.view(x.size(0), -1)
         
-        x = torch.cat((x, x_dense), dim=1)
-        # mult here
+        #x = torch.cat((x, x_dense), dim=1)
         # print(x.shape)
         
         x = self.resnet18.fc(x)
-        
+        x = x * x_dense
+
         x = F.relu(x)
         
         x = self.fc(x)
+
+        x = torch.flatten(x)
         
         return x
+    
+test_transform = transforms.Compose([
+    # transforms.Resize(100),
+    transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
+    # transforms.Grayscale(),
+    # transforms.CenterCrop(100),
+    # transforms.RandomCrop(100),
+    transforms.ToTensor(),
+    
+    # Mean and standard deviation were pre-computed on the training data
+    # (on the ImageNet dataset)
+    transforms.Normalize(
+        mean=NORMALIZE_PARAMS["rbg"]["mean"],
+        std=NORMALIZE_PARAMS["rbg"]["std"]
+    ),
+])
+
+transform_depth = transforms.Compose([
+        # Convert a PIL Image or numpy.ndarray to tensor
+        transforms.ToTensor(),
+        
+        # Reduce the size of the images
+        # (if size is an int, the smaller edge of the
+        # image will be matched to this number and the ration is kept)
+        transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
+        
+        # Normalize a tensor image with pre-computed mean and standard deviation
+        # (based on the data used to train the model(s))
+        # (be careful, it only works on torch.*Tensor)
+        transforms.Normalize(
+            mean=NORMALIZE_PARAMS["depth"]["mean"],
+            std=NORMALIZE_PARAMS["depth"]["std"]
+        ),
+])
+
+transform_normal = transforms.Compose([
+        # Convert a PIL Image or numpy.ndarray to tensor
+        transforms.ToTensor(),
+        
+        # Reduce the size of the images
+        # (if size is an int, the smaller edge of the
+        # image will be matched to this number and the ration is kept)
+        transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
+        
+        # Normalize a tensor image with pre-computed mean and standard deviation
+        # (based on the data used to train the model(s))
+        # (be careful, it only works on torch.*Tensor)
+        transforms.Normalize(
+            mean=NORMALIZE_PARAMS["normal"]["mean"],
+            std=NORMALIZE_PARAMS["normal"]["std"]
+        ),
+])
