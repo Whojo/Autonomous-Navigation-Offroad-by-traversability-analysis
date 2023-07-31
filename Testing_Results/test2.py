@@ -44,7 +44,7 @@ midpoints = viz.MIDPOINTS
 dataset_dir = viz.DATASET
 print("Dataset :", dataset_dir)
 index1 = "00022"
-index2 = "00258"
+index2 = "00207"
 road = cv2.imread(dataset_dir + f"/images/{index1}.png", cv2.IMREAD_COLOR)
 road_depth = cv2.imread(dataset_dir + f"/images/{index1}d.png", cv2.IMREAD_GRAYSCALE)
 road_normals = cv2.imread(dataset_dir + f"/images/{index1}n.png", cv2.IMREAD_COLOR)
@@ -52,6 +52,9 @@ road_normals = cv2.imread(dataset_dir + f"/images/{index1}n.png", cv2.IMREAD_COL
 grass = cv2.imread(dataset_dir + f"/images/{index2}.png", cv2.IMREAD_COLOR)
 grass_depth = cv2.imread(dataset_dir + f"/images/{index2}d.png", cv2.IMREAD_GRAYSCALE)
 grass_normals = cv2.imread(dataset_dir + f"/images/{index2}n.png", cv2.IMREAD_COLOR)
+
+road_resized = cv2.resize(road, (210,70))
+grass_resized =cv2.resize(grass, (210,70))
 
 # Make a PIL image
 road = PIL.Image.fromarray(road)
@@ -128,3 +131,8 @@ print(len(df))
 df_plot = df.plot(x=['linear_velocity'],y=['traversal_cost'], kind="scatter")
 
 plt.show()
+
+preview = np.vstack([road_resized, grass_resized])
+cv2.imshow("Samples :", preview)
+cv2.waitKey(0)
+cv2.destroyAllWindows()

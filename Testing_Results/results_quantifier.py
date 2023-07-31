@@ -229,15 +229,16 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
                     # Computing the cost from the classification problem with the help of midpoints
                     output = model(multimodal_image, velocity)
                     
-                    # Case Regression
-                    #cost = output.cpu()[0]
-                    
-                    # Case Classification
-                    softmax = nn.Softmax(dim=1)
-                    output = softmax(output)
-                    output = output.cpu()[0]
-                    probs = output.numpy()
-                    cost = np.dot(probs, np.transpose(midpoints))
+                    if viz.REGRESSION == True :
+                        # Case Regression
+                        cost = output.cpu()[0]
+                    else :
+                        # Case Classification
+                        softmax = nn.Softmax(dim=1)
+                        output = softmax(output)
+                        output = output.cpu()[0]
+                        probs = output.numpy()
+                        cost = np.dot(probs, np.transpose(midpoints))
                     
                     #Filling the output array (the numeric costmap)
                     costmap[y,x] = cost.item()
@@ -362,6 +363,7 @@ for i in range(number_files) :
     costmap_by_hand = np.load(input_dir + f"costmaps{i+1}.npy")
 
     costmap, min_cost, max_cost = predict_costs(img, img_depth, img_normal, rectangle_list, model)
+    print(costmap)
     print(np.mean(costmap[np.where(costmap != 0)]))
     max_cost = np.max([max_cost, np.max(costmap_by_hand)])
     min_cost = np.min([min_cost, np.min(costmap_by_hand)])

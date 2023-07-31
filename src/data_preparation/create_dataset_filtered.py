@@ -404,7 +404,7 @@ class DatasetBuilder():
                         #coherence = np.all(np.isclose(x_velocity, np.full(len(x_velocity), np.mean(x_velocity)), rtol=0.15))
                         
                         qup, qdown = np.percentile(x_velocity_array, [90, 10])
-                        q_thresh = 0.12
+                        q_thresh = 0.09
                         coherence = (qdown > np.mean(x_velocity)*(1.0-q_thresh)) and (qup < np.mean(x_velocity)*(1.0+q_thresh))
 
                         cohesion = (np.all(x_velocity_array > 0) if x_velocity_array[0] > 0 else np.all(x_velocity_array < 0))
@@ -858,18 +858,18 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="road_filtered")
+    dataset = DatasetBuilder(name="terrain_samples_filtered")
     
     dataset.write_images_and_compute_features(
         files=[
-            #"bagfiles/raw_bagfiles/Terrains_Samples/",
+            "bagfiles/raw_bagfiles/Terrains_Samples/",
             #"bagfiles/raw_bagfiles/ENSTA_Campus/",
             #"bagfiles/raw_bagfiles/Palaiseau_Forest/",
             #"bagfiles/raw_bagfiles/Troche/",
 
             #"bagfiles/raw_bagfiles/Terrains_Samples/troche_forest_hard_2023-05-30-13-44-49_0.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-14-05-20_0.bag"
+            #"bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
+            #"bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-14-05-20_0.bag"
             #"bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
         ])
 

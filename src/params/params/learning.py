@@ -6,7 +6,7 @@ import torch
 #########################
 
 # Define the data to be used
-DATASET = "../../../datasets/dataset_road_filtered/"
+DATASET = "../../../datasets/dataset_terrain_samples_filtered/"
 
 # Define splits size
 TRAIN_SIZE = 0.7
@@ -15,7 +15,7 @@ TEST_SIZE = 0.15
 
 # Set learning parameters
 LEARNING = {"batch_size": 32,
-            "nb_epochs": 2000,
+            "nb_epochs": 200,
             "learning_rate": 1e-4,
             "weight_decay": 0.001,
             "momentum": 0.9}
