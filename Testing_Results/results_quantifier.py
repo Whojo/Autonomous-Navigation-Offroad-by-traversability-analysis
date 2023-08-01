@@ -318,7 +318,7 @@ def display(img, costmap, costmap_by_hand, rectangle_list, grid_list, max_cost, 
             if costmap_diff[y,x]!= 0 :
                 
                 #Normalizing the content
-                value = np.uint8(((costmap_by_hand[y,x]-np.min(costmap_diff))/(np.max(costmap_diff)-np.min(costmap_diff)))*255)
+                value = np.uint8(((costmap_diff[y,x]/(np.max([np.abs(costmap_diff)]))))*255)
                 costmapviz_diff[y,x] = (value, value, value)
             else :
                 #If nothing we leave the image black
@@ -363,7 +363,6 @@ for i in range(number_files) :
     costmap_by_hand = np.load(input_dir + f"costmaps{i+1}.npy")
 
     costmap, min_cost, max_cost = predict_costs(img, img_depth, img_normal, rectangle_list, model)
-    print(costmap)
     print(np.mean(costmap[np.where(costmap != 0)]))
     max_cost = np.max([max_cost, np.max(costmap_by_hand)])
     min_cost = np.min([min_cost, np.min(costmap_by_hand)])
