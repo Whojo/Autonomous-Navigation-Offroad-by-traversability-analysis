@@ -21,7 +21,7 @@ from params import dataset
 import utilities.frames as frames
 import visualparams as viz
 
-results_dir = "/home/gabriel/PRE/Testing_Results/ResNet18Velocity_Regression/"
+results_dir = "/home/gabriel/PRE/Testing_Results/"
 input_dir ="/home/gabriel/PRE/bagfiles/images_extracted/"
 
 IMAGE_W = 1920

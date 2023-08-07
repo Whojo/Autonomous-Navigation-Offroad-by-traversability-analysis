@@ -145,7 +145,7 @@ def enter_costs(img, rectangle_list):
     """
     #Intializing buffers
     costmap = np.zeros((viz.Y,viz.X))
-    cv2.imshow(files[i], cv2.resize(img, (960, 540)))
+    cv2.imshow("Img", cv2.resize(img, (960, 540)))
 
     #Iteratinf on the rectangles
     for x in range(viz.X):
@@ -176,7 +176,7 @@ def enter_costs(img, rectangle_list):
                 #Filling the output array (the numeric costmap)
                 costmap[y,x] = cost
     
-    cv2.destroyWindow(files[i])
+    cv2.destroyWindow("Img")
     return(costmap)
 
 def display(img, costmap, rectangle_list, grid_list, max_cost, min_cost) :
@@ -254,11 +254,11 @@ costmaps = np.zeros((number_files, viz.Y, viz.X))
 
 rectangle_list, grid_list = get_lists()
 
-#for i in range(0,number_files) :
-#    img = cv2.imread(files[i])
-#
-#    costmaps[i, :, :] = enter_costs(img, rectangle_list)
-#    np.save(f"/home/gabriel/PRE/bagfiles/images_extracted/costmaps{i+1}", costmaps[i])
+for i in range(12,number_files) :
+    img = cv2.imread(files[i])
+
+    costmaps[i, :, :] = enter_costs(img, rectangle_list)
+    np.save(f"/home/gabriel/PRE/bagfiles/images_extracted/costmaps{i+1}", costmaps[i])
 
 #choices = np.random.choice(number_files, 4)
 

@@ -66,7 +66,7 @@ if __name__ == "__main__":
     
     bridge = cv_bridge.CvBridge()
 
-    destination = "/home/gabriel/PRE/bagfiles/images_extracted"
+    destination = "/home/gabriel/PRE/bagfiles/images_extracted/temp"
 
     try:  # A new directory is created if it does not exist yet
             os.mkdir(destination)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     index = 0
 
-    bag_file = "/home/gabriel/PRE/bagfiles/raw_bagfiles/Troche/troche_back_2023-05-30-13-59-28_1.bag"
+    bag_file = "/home/gabriel/PRE/bagfiles/raw_bagfiles/Palaiseau_Forest/tom_2023-05-30-14-05-29_7.bag"
 
     bag = rosbag.Bag(bag_file)
 
