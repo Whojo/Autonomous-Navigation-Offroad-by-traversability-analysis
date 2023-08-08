@@ -1,33 +1,42 @@
-# Python libraries
+# Python librairies
 import numpy as np
-import os
-import csv
 import sys
-from tqdm import tqdm
-import cv2
-from PIL import Image
-from scipy.fft import rfft, rfftfreq
-from scipy.ndimage import uniform_filter1d
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler,\
-                                  RobustScaler,\
-                                  OneHotEncoder,\
-                                  KBinsDiscretizer
-from sklearn.model_selection import train_test_split
-import shutil
-import pandas as pd
 import matplotlib.pyplot as plt
-plt.rcParams['text.usetex'] = True  # Render Matplotlib text with Tex
-import tifffile
+import pandas as pd
+import os
+import shutil
 
-# Custom modules and packages
-import utilities.drawing as dw
-import utilities.frames as frames
-from depth.utils import Depth
-import traversalcost.utils
-import traversalcost.traversal_cost
-import params.robot
-import params.dataset
-import params.traversal_cost
-import params.learning
+dataset_dir = "/home/gabriel/PRE/datasets/dataset_multimodal_siamese_png_filtered_hard"
+output_dir = "/home/gabriel/PRE/datasets"
+name = "/dataset_multimodal_siamese_png_filtered_hard_modified"
 
+df = pd.read_csv(dataset_dir + "/traversal_costs.csv")
+
+df_1 = df[df['linear_velocity'] <= df["linear_velocity"].mean()]
+
+nb_1 = df_1.shape[0]
+
+df_2 = df[df['linear_velocity'] <= df["linear_velocity"].mean()].sample(nb_1)
+
+df_total = pd.concat([df_1, df_2])
+
+df_total.plot.scatter(x='linear_velocity', y='traversal_cost')
+
+print(df_total["linear_velocity"].mean(), df_total.shape[0], df.shape[0])
+
+plt.show()
+
+try:
+    os.mkdir(output_dir + name)
+    print(output_dir + name + " folder created\n")
+except OSError :
+    try:
+        shutil.rmtree(output_dir + name, ignore_errors=True)
+        print(output_dir + name + " foldel deleted\n")
+        os.mkdir(output_dir + name)
+        print(output_dir + name + " folder created\n")
+    except OSError :
+        print("Aborting\n")
+        sys.exit(1)
+
+df_total.to_csv(output_dir + name + "/traversal_costs.csv", index=False)
