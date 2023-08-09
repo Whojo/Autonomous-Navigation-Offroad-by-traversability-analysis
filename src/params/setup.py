@@ -8,7 +8,7 @@ setup(
        # The name must match the folder name 'params'
         name="params", 
         version=VERSION,
-        author="Tom Ravaud",
+        author="Tom Ravaud & Gabriel Métois",
         author_email="<tom.ravaud@eleves.enpc.fr>",
         description=DESCRIPTION,
         packages=find_packages(),

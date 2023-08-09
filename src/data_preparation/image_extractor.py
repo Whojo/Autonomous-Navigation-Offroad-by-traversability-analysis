@@ -1,31 +1,31 @@
+"""
+A small too to browse a bagfile and extract some images.
+How to use it :
+    Select a rosbag
+    Press spacebar to jump to the next image
+    Press s key to save the image
+    Press echap key to exit
+"""
+
 # Python libraries
 import numpy as np
 import os
-import csv
+absolute_path = os.path.dirname(__file__)
 import sys
 from tqdm import tqdm
 import cv2
 from PIL import Image
-from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.model_selection import train_test_split
-import shutil
-import pandas as pd
 import matplotlib.pyplot as plt
 plt.rcParams['text.usetex'] = True  # Render Matplotlib text with Tex
-import tifffile
 
 # ROS Python libraries
 import cv_bridge
 import rosbag
 import rospy
-import tf.transformations
 
 # Custom modules and packages
-import utilities.drawing as dw
-import utilities.frames as frames
 from depth.utils import Depth
-import traversalcost.utils
-import traversalcost.traversal_cost
 import params.robot
 import params.dataset
 import params.traversal_cost
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     
     bridge = cv_bridge.CvBridge()
 
-    destination = "/home/gabriel/PRE/bagfiles/images_extracted/temp"
+    destination = os.path.join(absolute_path, "../../bagfiles/images_extracted/") 
 
     try:  # A new directory is created if it does not exist yet
             os.mkdir(destination)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     index = 0
 
-    bag_file = "/home/gabriel/PRE/bagfiles/raw_bagfiles/Palaiseau_Forest/tom_2023-05-30-14-05-29_7.bag"
+    bag_file = os.path.join(absolute_path, "../../bagfiles/raw_bagfiles/Palaiseau_Forest/tom_2023-05-30-14-05-29_7.bag")
 
     bag = rosbag.Bag(bag_file)
 

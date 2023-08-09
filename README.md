@@ -1,6 +1,6 @@
 # Self-supervised learning of terrain traversals costs for an Unmanned Ground Vehicle (UGV)
 
-This repository contains the source code of the application I am working on during my six months internship in the Computer Science and Systems Engineering Laboratory (U2IS), ENSTA Paris.
+This repository contains the source code of the application Tom Ravaud and Gabriel Métois have been working on during their six months internship in the Computer Science and Systems Engineering Laboratory (U2IS), ENSTA Paris.
 
 This project is about learning to estimate terrain traversability from vision for a mobile robot using a self-supervised approach.
 
@@ -8,13 +8,16 @@ This project is about learning to estimate terrain traversability from vision fo
 <!-- # Code overview
 
 - `bagfiles/` contains the raw data as bagfiles and some helper scripts.
-  - `filter_bag.sh` contains the command used to extract the sample bag from the full data.
-  - `sample_bag.bag` is a short sample file, the full dataset (`rania_2022-07-01-11-40-52.bag`) is available at https://drive.google.com/drive/folders/1aEfvWY1DxogPogli_FlXV0OhHR5cS7g-?usp=sharing. 
-  - `rosbag_record_topic_list.txt` is the list of topics that should be recorded on the robot. 
+  - 'raw_bagfiles' contains the ROSbags from which the data can be extracted to build a dataset
+  - 'images_extracted' contains some images extracted by hand and their respective data labelled by the user himself for result measurement purpose
 
-- `datasets/` contains the dataset created from bagfiles processing
+- `datasets/` contains the dataset created from bagfiles processed with the tool create_dataset.py of the src/data_preparation folder
+              Each subfolder represents a dataset
 
-- `create_dataset.py` will process a bag file to create a self-supervised dataset
+- `results' is a small folder used to store various results of measurement.
+            - A subfolder named after a dataset contains a collage from show_dataset.py displaying an overview of the dataset
+            - A folder named after a Model contains the videos made from results_quantifier.py analysing the network's performances over the test    frames selected in bagfiles/images_extracted
+            - labellizer.py 
 
 - `show_dataset.py` will create a collage of worst and best images from dataset
 
