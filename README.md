@@ -7,20 +7,20 @@ This project is about learning to estimate terrain traversability from vision fo
 
 # Code overview
 
-- `bagfiles/` contains the raw data as bagfiles and some helper scripts.
+- `bagfiles` contains the raw data as bagfiles and some helper scripts.
   - `raw_bagfiles` contains the ROSbags from which the data can be extracted to build a dataset
   - `images_extracted` contains some images extracted by hand and their respective data labelled by the user himself for result measurement purpose
   - `rosbag_records.sh` is a small bash script to record rosbags
 
-- `datasets/` contains the dataset created from bagfiles processed with the tool create_dataset.py of the src/data_preparation folder
+- `datasets` contains the dataset created from bagfiles processed with the tool create_dataset.py of the src/data_preparation folder
               Each subfolder represents a dataset
 
-- `results/` is a small folder used to store various results of measurement.
+- `results` is a small folder used to store various results of measurement.
             - A subfolder named after a dataset contains a collage from show_dataset.py displaying an overview of the dataset
             - A folder named after a Model contains the videos made from results_quantifier.py analysing the network's performances over the test    frames selected in bagfiles/images_extracted
             - labellizer.py 
 
-- `ROS_NODE/` is a python node for ROS, it loads the network and reads a rosbag / listens to the ZED node, and build a costmap. It can even record    it's output in a video. Currently it cannot be interfaced with ROS' stack navigation but it's on the to-do-list.
+- `ROS_NODE` is a python node for ROS, it loads the network and reads a rosbag / listens to the ZED node, and build a costmap. It can even record    it's output in a video. Currently it cannot be interfaced with ROS' stack navigation but it's on the to-do-list.
 
 - `script` has the install and uninstall scripts for properly install the parameters python package
 
