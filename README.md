@@ -53,19 +53,19 @@ Assuming you have ROS installed and some rosbags at hand for the training :
 
 1- Go in the parameters `params` and set up all the variable following your preferences or your hardware configuration
 
-2- setup the packages of parameters running scripts/install.sh
+2- setup the packages of parameters running `scripts/install.sh`
 
-3- Go in src/traversal_cost/siamese_network and run `create_dataset` after setting at the bottom which rosbags you want to use
+3- Go in `src/traversal_cost/siamese_network` and run `create_dataset` after setting at the bottom which rosbags you want to use
 
 4- run `main.py` from the same folder in order to train your siamese network. When the goddamn thing has the correct mojo (you can check it out in the logs folder), proceed to the next step
 
-5- In src/data_preparation/ run `create_dataset.py` after specifying which rosbags you want to use. If you want to tailor a little bit this dataset (the dataset creation car sometimes be very messy) you can then use dataset_modif to balance your new dataset.
+5- In `src/data_preparation/` run `create_dataset.py` after specifying which rosbags you want to use. If you want to tailor a little bit this dataset (the dataset creation car sometimes be very messy) you can then use dataset_modif to balance your new dataset.
 
-6- Go in src/models_development and choose the folder corresponding to the model of your choice. You can even try to build a new model by copy-pasting and existing one and editing the .py files. Once done, run the .ipynb at least until the log generation cell.
+6- Go in `src/models_development` and choose the folder corresponding to the model of your choice. You can even try to build a new model by copy-pasting and existing one and editing the .py files. Once done, run the .ipynb at least until the log generation cell.
 
 7- In the logs folder a subfolder named after the date and time of the training will appear. Along several useful informations and results, the .params are the weights of your network.
 
-8- Copy the folder ROS_NODE/visual_traversability in your catkin_ws.
+8- Copy the folder `ROS_NODE/visual_traversability` in your `catkin_ws`.
 
 9- In the visualparams.py parameters file, don't forget to update the model and the weights you want to use.
 
