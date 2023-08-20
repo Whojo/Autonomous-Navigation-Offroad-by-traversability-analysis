@@ -15,7 +15,7 @@ This project is about learning to estimate terrain traversability from vision fo
 - `datasets` contains the dataset created from bagfiles processed with the tool create_dataset.py of the src/data_preparation folder
               Each subfolder represents a dataset
 
-- `results` is a small folder used to store various results of measurement.
+- `Testing_Results` is a small folder used to store various results of measurement.
             - A subfolder named after a dataset contains a collage from show_dataset.py displaying an overview of the dataset
             - A folder named after a Model contains the videos made from results_quantifier.py analysing the network's performances over the test    frames selected in bagfiles/images_extracted
             - labellizer.py 
