@@ -7,6 +7,7 @@ runs/
 bagfiles/raw_bagfiles
 bagfiles/images_extracted
 dist/
+src/traversal_cost/datasets
 
 # Files used to train myself on classification with the ImageNet dataset
 coffee.jpg

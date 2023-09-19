@@ -49,9 +49,9 @@ This project is about learning to estimate terrain traversability from vision fo
 
 # Code usage
 
-Assuming you have ROS installed and some rosbags at hand for the training :
+Assuming you have ROS Noetic installed and some rosbags at hand for the training :
 
-1- Go in the parameters `params` and set up all the variable following your preferences or your hardware configuration
+1- Go in the parameters `src/params` and set up all the variable following your preferences or your hardware configuration
 
 2- setup the packages of parameters running `scripts/install.sh`
 
