@@ -1,10 +1,11 @@
 # Directories to be ignored
 __pycache__/
-dataset_*/
+datasets/*
 results/
 pytorch/
 runs/
-bagfiles/raw_bagfiles/
+bagfiles/raw_bagfiles
+bagfiles/images_extracted
 dist/
 
 # Files used to train myself on classification with the ImageNet dataset
