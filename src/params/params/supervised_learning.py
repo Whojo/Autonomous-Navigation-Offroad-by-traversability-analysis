@@ -1,8 +1,6 @@
-import numpy as np
-from datetime import datetime
-
 # Import custom packages
 import traversalcost.features
+from params import PROJECT_PATH
 
 
 #########################################################
@@ -27,7 +25,7 @@ FEATURES = {"function": traversalcost.features.wrapped_signal_fft,
 INPUT_FEATURE_SIZE = 78
 
 #Link to the Dataset
-DATASET = "/home/student/Desktop/Stage ENSTA/Internship-U2IS/src/traversal_cost/datasets/dataset_small_DS_test/"
+DATASET = PROJECT_PATH / "src/traversal_cost/datasets/dataset_small_DS_test/"
 
 
 #Dictionnary with cost functions according to terrains used when creating dataframe

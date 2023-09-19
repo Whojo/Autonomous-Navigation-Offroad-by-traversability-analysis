@@ -31,8 +31,8 @@ def compute_mean_std(images_directory: str,
      
     # Create a Dataset for training
     dataset = TraversabilityDataset(
-        traversal_costs_file=params.learning.DATASET+traversal_costs_file,
-        images_directory=params.learning.DATASET+images_directory,
+        traversal_costs_file=params.learning.DATASET / traversal_costs_file,
+        images_directory=params.learning.DATASET / images_directory,
         transform_image=transform,
         transform_depth=transform,
         transform_normal=transform

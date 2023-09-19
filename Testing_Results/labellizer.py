@@ -1,15 +1,16 @@
-import PIL
-import sys
 import numpy as np
 import cv2
+from tqdm import tqdm
+
 import utilities.frames as frames
-import visualparams as viz
-from depth import utils as depth
-import os
+from params import visualparams as viz
+from params import PROJECT_PATH
+
 
 IMAGE_H, IMAGE_W = 1080, 1920
 
-def get_corners(x, y) :
+
+def get_corners(x, y):
     """
     Function that gives the corners of a cell in the costmap
 
@@ -134,20 +135,16 @@ def enter_costs(img, rectangle_list):
     Then reconstituate a costmap of costs
     Args:
         img : RGB input of the robot
-        img_depth : depth image of the robot
-        img_normals : RGB representation of the normals computed from the depth image
         rectangle_list : list of the rectangle coordinates indicating where to crop according to the costmap's projection on the image
-        model : the NN
     
     Returns:
         Costmap : A numpy array of X*Y dimension with the costs
-        max_cost, min_cost : the max and min cost of the costmap, useful for visualization later ;)
     """
     #Intializing buffers
     costmap = np.zeros((viz.Y,viz.X))
     cv2.imshow("Img", cv2.resize(img, (960, 540)))
 
-    #Iteratinf on the rectangles
+    #Iterating on the rectangles
     for x in range(viz.X):
         for y in range(viz.Y) :
             
@@ -177,7 +174,7 @@ def enter_costs(img, rectangle_list):
                 costmap[y,x] = cost
     
     cv2.destroyWindow("Img")
-    return(costmap)
+    return costmap
 
 def display(img, costmap, rectangle_list, grid_list, max_cost, min_cost) :
     """
@@ -240,31 +237,27 @@ def display(img, costmap, rectangle_list, grid_list, max_cost, min_cost) :
     cv2.imshow("Costmap", cv2.resize(cv2.flip(costmapviz, 0),(viz.X*20,viz.Y*20)))
     cv2.waitKey(0)
 
-directory = "/home/gabriel/PRE/bagfiles/images_extracted/"
 
-number_files = len([name for name in os.listdir("/home/gabriel/PRE/bagfiles/images_extracted/") if os.path.isfile(directory + name) and name.lower().endswith('.png')])//3
+if __name__ == "__main__":
+    directory = PROJECT_PATH / "bagfiles/images_extracted/"
+    print(directory.resolve())
 
-files = np.array([directory + f"{i+1}.png" for i in range(number_files)])
+    # Matches any file that ends with a number and .png
+    # (i.e. only rgb images, not depth or normals)
+    files = directory.glob("*[0-9].png")
+    files = list(map(str, files))
 
-print(files)
+    costmaps = np.zeros((len(files), viz.Y, viz.X))
+    rectangle_list, grid_list = get_lists()
 
-np.save("/home/gabriel/PRE/bagfiles/images_extracted/files", files)
+    # Manually enters all costmaps
+    # for i, file in enumerate(tqdm(files)):
+    #     img = cv2.imread(file)
+    #     costmaps[i, :, :] = enter_costs(img, rectangle_list)
+    #     np.save(directory / f"costmaps{i+1}", costmaps[i])
 
-costmaps = np.zeros((number_files, viz.Y, viz.X))
-
-rectangle_list, grid_list = get_lists()
-
-for i in range(12,number_files) :
-    img = cv2.imread(files[i])
-
-    costmaps[i, :, :] = enter_costs(img, rectangle_list)
-    np.save(f"/home/gabriel/PRE/bagfiles/images_extracted/costmaps{i+1}", costmaps[i])
-
-#choices = np.random.choice(number_files, 4)
-
-#for i in range(number_files) :
-#    img = cv2.imread(files[i])
-#    costmap = np.load(f"/home/gabriel/PRE/bagfiles/images_extracted/costmaps{i+1}.npy")
-#    display(img, costmap, rectangle_list, grid_list, np.max(costmap), np.min(costmap))
-
-
+    # Displays all costmaps
+    for i, file in enumerate(files):
+        img = cv2.imread(file)
+        costmap = np.load(directory / f"costmaps{i+1}.npy")
+        display(img, costmap, rectangle_list, grid_list, np.max(costmap), np.min(costmap))

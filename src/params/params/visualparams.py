@@ -1,8 +1,8 @@
 # Python librairies
 import numpy as np
 import torch
-import os
-absolute_path = os.path.dirname(__file__)
+
+from params import PROJECT_PATH
 
 # Importing custom made parameters
 from params import robot
@@ -13,8 +13,7 @@ from exportedmodels import ResNet18Velocity
 from exportedmodels import ResNet18Velocity_Regression_V2
 
 #Ros node location, usually in catkin_ws/src
-
-node_path = "/home/gabriel/PRE/ROS_NODE/visual_traversability"
+node_path = PROJECT_PATH / "ROS_NODE/visual_traversability"
 
 # Importing parameters relative to the robot size and configuration
 ALPHA = robot.alpha
@@ -40,10 +39,10 @@ DEPTH_TOPIC = robot.DEPTH_TOPIC
 DEPTH_RATE = robot.DEPTH_SAMPLE_RATE
 NB_MESSAGES_THR = dataset.NB_MESSAGES_THR
 TIME_DELTA = dataset.TIME_DELTA
-INPUT_DIR = os.path.join(absolute_path, "../../../bagfiles/raw_bagfiles/ENSTA_Campus/tom_2023-05-30-13-28-39_1.bag")
+INPUT_DIR = PROJECT_PATH / "bagfiles/raw_bagfiles/ENSTA_Campus/tom_2023-05-30-13-28-39_1.bag"
 
 # Parameters relative to the video recording
-OUTPUT_DIR = node_path + "/output"
+OUTPUT_DIR = node_path / "output"
 VISUALIZE = True
 RECORD = False
 LIVE = False
@@ -59,7 +58,7 @@ else :
     MODEL = ResNet18Velocity.ResNet18Velocity(nb_input_channels=learning.NET_PARAMS["nb_input_channels"],
                                               nb_input_features=learning.NET_PARAMS["nb_input_features"],
                                               nb_classes=learning.NET_PARAMS["nb_classes"]).to(device=DEVICE)
-WEIGHTS = node_path + "/weights/ResNet18Velocity_Regression_V2/total_filtered_hard.params"
+WEIGHTS = node_path / "weights/ResNet18Velocity_Regression_V2/total_filtered_hard.params"
 
 CROP_WIDTH = 210
 CROP_HEIGHT = 70
@@ -68,10 +67,10 @@ TRANSFORM = ResNet18Velocity.test_transform
 TRANSFORM_DEPTH = ResNet18Velocity.transform_depth
 TRANSFORM_NORMAL = ResNet18Velocity.transform_normal
 
-DATASET = os.path.join(absolute_path, "../../../datasets/dataset_multimodal_siamese_png_filtered_hard")
-if REGRESSION == False :
-    MIDPOINTS = np.load(DATASET + "/bins_midpoints.npy")
-else :
+DATASET = PROJECT_PATH / "datasets/dataset_multimodal_siamese_png_filtered_hard"
+if not REGRESSION:
+    MIDPOINTS = np.load(DATASET / "bins_midpoints.npy")
+else:
     MIDPOINTS = None
 
 VELOCITY = 0.2

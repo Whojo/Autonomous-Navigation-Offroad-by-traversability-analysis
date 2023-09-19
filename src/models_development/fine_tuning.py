@@ -22,10 +22,11 @@ from tqdm import tqdm
 # Import modules and libraries
 import sys
 
+from params import PROJECT_PATH
+
 # Add the location of the data_preparation directory at runtime
 # (would be better to structure the files into packages)
-sys.path.insert(
-    0, "/home/tom/Traversability-Tom/Internship-U2IS/src/data_preparation")
+sys.path.insert(0, str(PROJECT_PATH / "src/data_preparation"))
 
 # Import custom module(s)
 import data_preparation as dp

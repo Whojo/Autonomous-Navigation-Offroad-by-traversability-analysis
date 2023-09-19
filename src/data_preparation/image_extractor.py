@@ -1,5 +1,5 @@
 """
-A small too to browse a bagfile and extract some images.
+A small tool to browse a bagfile and extract some images.
 How to use it :
     Select a rosbag
     Press spacebar to jump to the next image
@@ -10,7 +10,6 @@ How to use it :
 # Python libraries
 import numpy as np
 import os
-absolute_path = os.path.dirname(__file__)
 import sys
 from tqdm import tqdm
 import cv2
@@ -30,6 +29,8 @@ import params.robot
 import params.dataset
 import params.traversal_cost
 import params.learning
+from params import PROJECT_PATH
+
 
 def is_bag_healthy(bag: str) -> bool:
     """Check if a bag file is healthy
@@ -66,23 +67,21 @@ if __name__ == "__main__":
     
     bridge = cv_bridge.CvBridge()
 
-    destination = os.path.join(absolute_path, "../../bagfiles/images_extracted/") 
+    destination = PROJECT_PATH / "bagfiles/images_extracted/"
 
     try:  # A new directory is created if it does not exist yet
             os.mkdir(destination)
-            print(destination + " folder created\n")
+            print(str(destination) + " folder created")
 
     except OSError:  # Display a message if it already exists and quit
-        print("Existing directory " + destination)
+        print("Existing directory :" + str(destination))
 
     index = 0
-
-    bag_file = os.path.join(absolute_path, "../../bagfiles/raw_bagfiles/Palaiseau_Forest/tom_2023-05-30-14-05-29_7.bag")
-
-    bag = rosbag.Bag(bag_file)
+    bag_file = PROJECT_PATH / "bagfiles/raw_bagfiles/Troche/troche_2023-05-30-13-28-42_15.bag"
+    bag = rosbag.Bag(str(bag_file))
 
     if not is_bag_healthy(bag):
-        print("File " + bag_file + " is incomplete. Skipping...")
+        print("File " + str(bag_file) + " is incomplete. Skipping...")
         sys.exit(1)
 
     for _, msg_image, t_image in tqdm(bag.read_messages(topics=[params.robot.IMAGE_TOPIC]), total=bag.get_message_count(params.robot.IMAGE_TOPIC)):
@@ -183,24 +182,25 @@ if __name__ == "__main__":
 
             # Convert the image from BGR to RGB
             normal_to_save = cv2.cvtColor(
-            normal_to_save,
-            cv2.COLOR_BGR2RGB)
+                normal_to_save,
+                cv2.COLOR_BGR2RGB
+            )
 
             # Make a PIL image
             image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
             # Give the image a name
             image_name = f"{index:05d}.png"
             # Save the image in the correct directory
-            image.save(destination + "/" + image_name, "PNG")
+            image.save(destination / image_name, "PNG")
 
             # Make a PIL image
             normal_to_save = Image.fromarray(normal_to_save)
             # Save the image in the correct directory
-            normal_to_save.save(destination + "/" + normal_map_name, "PNG")
+            normal_to_save.save(destination / normal_map_name, "PNG")
 
             # Make a PIL image
             depth_to_save = Image.fromarray(depth_to_save)
             # Save the image in the correct directory
-            depth_to_save.save(destination + "/" + depth_image_name, "PNG")
+            depth_to_save.save(destination / depth_image_name, "PNG")
 
-        index+=1
+        index += 1

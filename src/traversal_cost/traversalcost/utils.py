@@ -129,7 +129,7 @@ def compute_traversal_costs(dataset,
         velocities of the robot and the traversal costs
     """    
     # Read the csv file containing the labels
-    labels_df = pd.read_csv(dataset + "labels.csv",
+    labels_df = pd.read_csv(dataset / "labels.csv",
                             converters={"id": str})
     
     # Add an empty column to the dataframe
@@ -140,7 +140,7 @@ def compute_traversal_costs(dataset,
         id = labels_df["id"][i]
         
         # Load the features of the current sample
-        features = np.load(dataset + "features/" + str(id) + ".npy")
+        features = np.load(dataset / "features" / (str(id) + ".npy"))
         
         # Convert the features to a tensor if required
         if to_tensor:

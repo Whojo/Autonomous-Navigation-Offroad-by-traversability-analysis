@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+
 class SupervisedLoss(torch.nn.Module):
     """Loss function for the siamese network
 

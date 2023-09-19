@@ -1,10 +1,10 @@
 from tabulate import tabulate
 import os
-import cv2
 import torch
 from typing import List, Any
-import PIL
+from pathlib import Path
 import matplotlib.pyplot as plt
+
 plt.rcParams.update({
     "pgf.texsystem": "pdflatex",
     'font.family': 'serif',
@@ -17,7 +17,7 @@ import params.siamese
 import traversalcost.utils
 
 
-def parameters_table(dataset: str,
+def parameters_table(dataset: Path,
                      learning_params: dict) -> List[List[Any]]:
     """Generate a table containing the parameters used to train the Siamese
     network
@@ -44,7 +44,7 @@ def parameters_table(dataset: str,
             "Momentum",
         ],
         [
-            dataset.split("/")[-2],
+            dataset.name,
             params.siamese.TRAIN_SIZE,
             params.siamese.VAL_SIZE,
             params.siamese.TEST_SIZE,
@@ -92,7 +92,7 @@ def generate_log(dataset_directory: str,
     os.mkdir(results_directory)
     
     # Open a text file
-    test_loss_file = open(results_directory + "/test_results.txt", "w")
+    test_loss_file = open(results_directory / "test_results.txt", "w")
     # Write the test loss in it
     test_loss_file.write(f"Test loss: {test_loss}\n")
     # Write the test accuracy in it
@@ -101,14 +101,14 @@ def generate_log(dataset_directory: str,
     test_loss_file.close()
     
     # Open a text file
-    parameters_file = open(results_directory + "/parameters_table.txt", "w")
+    parameters_file = open(results_directory / "parameters_table.txt", "w")
     # Write the table of learning parameters in it
     parameters_file.write(parameters_table)
     # Close the file
     parameters_file.close()
     
     # Open a text file
-    network_file = open(results_directory + "/network.txt", "w")
+    network_file = open(results_directory / "network.txt", "w")
     # Write the network in it
     print(model, file=network_file)
     # Close the file
@@ -126,7 +126,7 @@ def generate_log(dataset_directory: str,
     plt.legend()
     plt.xlabel("Epoch")
     
-    plt.savefig(results_directory + "/learning_curve.png")
+    plt.savefig(results_directory / "learning_curve.png")
     
     # Create and save the accuracy curve
     train_accuracies = accuracy_values[0]
@@ -140,7 +140,7 @@ def generate_log(dataset_directory: str,
     plt.legend()
     plt.xlabel("Epoch")
     
-    plt.savefig(results_directory + "/accuracy_curve.png")
+    plt.savefig(results_directory / "accuracy_curve.png")
     
     # Compute the traversal costs from the features of the dataset
     costs_df = traversalcost.utils.compute_traversal_costs(
@@ -152,14 +152,14 @@ def generate_log(dataset_directory: str,
     cost_graph = traversalcost.utils.display_traversal_costs(costs_df)
     
     # Save the traversal cost graph
-    cost_graph.save(results_directory + "/traversal_cost_graph.png", "PNG")
+    cost_graph.save(results_directory / "traversal_cost_graph.png", "PNG")
     
     # Display the whiskers
     cost_whiskers =\
         traversalcost.utils.display_traversal_costs_whiskers(costs_df)
     
     # Save the whiskers
-    cost_whiskers.save(results_directory + "/traversal_cost_whiskers.png",
+    cost_whiskers.save(results_directory / "traversal_cost_whiskers.png",
                        "PNG")
     
     # Display the confidence intervals
@@ -168,12 +168,12 @@ def generate_log(dataset_directory: str,
     
     # Save the confidence intervals
     cost_confidence_intervals.save(
-        results_directory + "/confidence_intervals.png",
+        results_directory / "confidence_intervals.png",
         "PNG")
     
     # Save the model parameters
     torch.save(model.state_dict(),
-               results_directory + "/" + params.siamese.PARAMS_FILE)
+               results_directory / params.siamese.PARAMS_FILE)
 
 
 # Main program

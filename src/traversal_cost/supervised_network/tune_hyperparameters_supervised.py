@@ -58,19 +58,19 @@ def objective(trial):
     print(f"dataset is {DATASET}")
     
     # Create a Dataset for training
-    train_set = SupervisedNetworkDataset(params.supervised_learning.DATASET + "traversalcosts_train.csv",
-                                         params.supervised_learning.DATASET + "/features")
+    train_set = SupervisedNetworkDataset(params.supervised_learning.DATASET / "traversalcosts_train.csv",
+                                         params.supervised_learning.DATASET / "features")
     
     # Create a Dataset for validation
     # (same as training here since no transformation is applied to the data,
     # train and validation sets will be split later)
     
-    val_set = SupervisedNetworkDataset(params.supervised_learning.DATASET + "traversalcosts_train.csv",
-                                        params.supervised_learning.DATASET + "/features")
+    val_set = SupervisedNetworkDataset(params.supervised_learning.DATASET / "traversalcosts_train.csv",
+                                       params.supervised_learning.DATASET / "features")
     
     # Create a Dataset for testing
-    test_set = SupervisedNetworkDataset(params.supervised_learning.DATASET +"traversalcosts_test.csv",
-                                                    params.supervised_learning.DATASET + "/features")
+    test_set = SupervisedNetworkDataset(params.supervised_learning.DATASET / "traversalcosts_test.csv",
+                                        params.supervised_learning.DATASET / "features")
 
     
     # Set the train dataset size

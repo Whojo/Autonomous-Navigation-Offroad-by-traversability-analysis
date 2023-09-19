@@ -21,8 +21,11 @@ from params import dataset
 import utilities.frames as frames
 import visualparams as viz
 
-results_dir = "/home/gabriel/PRE/Testing_Results/"
-input_dir ="/home/gabriel/PRE/bagfiles/images_extracted/"
+from params import PROJECT_PATH
+
+
+results_dir = PROJECT_PATH / "Testing_Results/"
+input_dir = PROJECT_PATH / "bagfiles/images_extracted/"
 
 IMAGE_W = 1920
 IMAGE_H = 1080
@@ -46,7 +49,8 @@ VELOCITY = 1.0
 
 print(viz.WEIGHTS)
 
-def get_corners(x, y) :
+
+def get_corners(x, y):
     """
     Function that gives the corners of a cell in the costmap
 
@@ -58,7 +62,8 @@ def get_corners(x, y) :
 
     points = np.array([[x, y, 0], [x+1, y, 0], [x+1, y+1, 0], [x, y+1, 0]])
 
-    return(points)
+    return points
+
 
 def correct_points(points_image):
     """Remove the points which are outside the image
@@ -81,7 +86,8 @@ def correct_points(points_image):
     
     return result
 
-def get_lists() :
+
+def get_lists():
     """
     Setup the list of rectangles and lines that will be later used of inference
     Args:
@@ -346,12 +352,12 @@ def display(img, costmap, costmap_by_hand, rectangle_list, grid_list, max_cost, 
     writer.write(result)
     cv2.waitKey(0)
 
-files = np.load(input_dir + "files.npy")
+files = np.load(input_dir / "files.npy")
 number_files = len(files)
 
 rectangle_list, grid_list = get_lists()
 
-writer = cv2.VideoWriter("/home/gabriel/PRE/Testing_Results/output.avi", cv2.VideoWriter_fourcc(*'XVID'), 0.5, (1792,1008))
+writer = cv2.VideoWriter(str(PROJECT_PATH / "Testing_Results/output.avi"), cv2.VideoWriter_fourcc(*'XVID'), 0.5, (1792,1008))
 
 for i in range(number_files) :
     name = files[i]
@@ -360,7 +366,7 @@ for i in range(number_files) :
     img = cv2.imread(name)
     img_depth = cv2.imread(depth_name, cv2.IMREAD_GRAYSCALE)
     img_normal = cv2.imread(normal_name)
-    costmap_by_hand = np.load(input_dir + f"costmaps{i+1}.npy")
+    costmap_by_hand = np.load(input_dir / f"costmaps{i+1}.npy")
 
     costmap, min_cost, max_cost = predict_costs(img, img_depth, img_normal, rectangle_list, model)
     print(np.mean(costmap[np.where(costmap != 0)]))

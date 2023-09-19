@@ -1,8 +1,5 @@
-import numpy as np
-from datetime import datetime
-
-# Import custom packages
 import traversalcost.features
+from params import PROJECT_PATH
 
 
 #########################################################
@@ -48,7 +45,7 @@ FEATURES = {"function": traversalcost.features.wrapped_signal_fft,
 #############################################
 
 # Path to the dataset to be used (relative to the notebook path)
-DATASET = "../datasets/dataset_200Hz_wrap_fft/"
+DATASET = PROJECT_PATH / "src/traversal_cost/datasets/dataset_200Hz_wrap_fft/"
 
 # Define splits size
 TRAIN_SIZE = 0.7

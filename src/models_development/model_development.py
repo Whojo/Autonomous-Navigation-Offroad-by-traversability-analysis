@@ -9,10 +9,11 @@ and optimize our hyperparameters to improve performance to a desired level
 # Import modules and libraries
 import sys
 
+from params import PROJECT_PATH
+
 # Add the location of the data_preparation directory at runtime
 # (would be better to structure the files into packages)
-sys.path.insert(
-    0, "/home/tom/Traversability-Tom/Internship-U2IS/src/data_preparation")
+sys.path.insert(0, str(PROJECT_PATH / "src/data_preparation"))
 
 import torch
 from torch import nn

@@ -10,13 +10,14 @@ import torch
 # Provide support form images use
 from torchvision import transforms
 
+from params import PROJECT_PATH
+
 
 # Code executed when the file runs as a script,
 # but not when imported as a module
 if __name__ == "__main__":
     # Open the first image of the sample dataset
-    image = Image.open(
-        "/home/gabriel/PRE/datasets/dataset_multimodal_siamese_png/images/00000.png")
+    image = Image.open(PROJECT_PATH / "datasets/dataset_multimodal_siamese_png/images/00000.png")
     # image = Image.open(
     #     "datasets/dataset_sample_bag/zed_node_rgb_image_rect_color/00000.png")
     

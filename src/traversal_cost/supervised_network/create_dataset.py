@@ -1,10 +1,7 @@
 # Python packages
 import pandas as pd
-import random
 import numpy as np
-import itertools  # To get combinations of elements in a list
 import os
-import sys
 import rosbag
 import matplotlib.pyplot as plt
 plt.rcParams.update({
@@ -57,7 +54,6 @@ class SupervisedDatasetBuilder():
                                  "/src/traversal_cost/datasets/dataset_" +\
                                  self.name
         
-        
         try:  # A new directory is created if it does not exist yet
             os.mkdir(self.dataset_directory)
             print(self.dataset_directory + " folder created\n")
@@ -66,7 +62,7 @@ class SupervisedDatasetBuilder():
             print("Existing directory " + self.dataset_directory)
             print("Aborting to avoid overwriting data\n")
             pass
-            #sys.exit(1)  # Stop the execution of the script
+            # sys.exit(1)  # Stop the execution of the script
         
         # Create a sub-directory to store signals features
         self.features_directory = self.dataset_directory + "/features"
@@ -150,8 +146,7 @@ class SupervisedDatasetBuilder():
             files (list): List of bag files
         """
         # Open the csv file which contains the labels in read mode
-        file_labels = pd.read_csv(csv_labels,
-                                  converters={"id": str})
+        file_labels = pd.read_csv(csv_labels, converters={"id": str})
                 
         #Create a list of store bag files paths
         bag_files = []
@@ -339,27 +334,23 @@ class SupervisedDatasetBuilder():
 # The "__main__" flag acts as a shield to avoid these lines to be executed if
 # this file is imported in another one
 if __name__ == "__main__":
-    
     dataset = SupervisedDatasetBuilder(name="small_DS_test")
     
     # List of the bag files to be processed
-    files=[
-        "bagfiles/raw_bagfiles/speed_dependency/"
-        ]
+    files = ["bagfiles/raw_bagfiles/speed_dependency/"]
     
     # Choose between manual labeling or labeling from a csv file
-    #dataset.manual_labeling(files=files)
+    # dataset.manual_labeling(files=files)
     
     # If you choose the labeling from a csv file, you must provide the csv
     # file which contains the labels. It allows us to extract new features
     # from already labeled signals
     
     dataset.labeling_from_file(
-            csv_labels="src/traversal_cost/data_Arnaud/labels.csv",
-            files=files)
+        csv_labels="src/traversal_cost/data_Arnaud/labels.csv",
+        files=files
+    )
     
     dataset.generate_features_description()
-        
     dataset.generate_costs()
-    
     dataset.create_train_test_splits()

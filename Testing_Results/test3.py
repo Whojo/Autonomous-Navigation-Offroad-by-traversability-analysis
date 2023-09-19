@@ -12,16 +12,12 @@ import cv2
 import torch
 import torch.nn as nn
 import PIL
-import sys
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
 
 # Importing custom made parameters
-from depth import utils as depth
-from params import dataset
-import utilities.frames as frames
 import visualparams as viz
+from params import PROJECT_PATH
 
 # Initializing some parameters for the model
 transform = viz.TRANSFORM
@@ -41,23 +37,23 @@ score_branch = np.zeros(velocities.shape)
 
 midpoints = viz.MIDPOINTS
 
-dataset_dir = "/home/gabriel/PRE/datasets/dataset_road_grass_filtered"
+dataset_dir = PROJECT_PATH / "datasets/dataset_road_grass_filtered"
 
 index1 = "00309"
 index2 = "00528"
 index3 = "00017"
 
-road = cv2.imread(dataset_dir + f"/images/{index1}.png", cv2.IMREAD_COLOR)
-road_depth = cv2.imread(dataset_dir + f"/images/{index1}d.png", cv2.IMREAD_GRAYSCALE)
-road_normals = cv2.imread(dataset_dir + f"/images/{index1}n.png", cv2.IMREAD_COLOR)
+road = cv2.imread(str(dataset_dir / f"/images/{index1}.png"), cv2.IMREAD_COLOR)
+road_depth = cv2.imread(str(dataset_dir / f"/images/{index1}d.png"), cv2.IMREAD_GRAYSCALE)
+road_normals = cv2.imread(str(dataset_dir / f"/images/{index1}n.png"), cv2.IMREAD_COLOR)
 
-grass = cv2.imread(dataset_dir + f"/images/{index2}.png", cv2.IMREAD_COLOR)
-grass_depth = cv2.imread(dataset_dir + f"/images/{index2}d.png", cv2.IMREAD_GRAYSCALE)
-grass_normals = cv2.imread(dataset_dir + f"/images/{index2}n.png", cv2.IMREAD_COLOR)
+grass = cv2.imread(str(dataset_dir / f"/images/{index2}.png"), cv2.IMREAD_COLOR)
+grass_depth = cv2.imread(str(dataset_dir / f"/images/{index2}d.png"), cv2.IMREAD_GRAYSCALE)
+grass_normals = cv2.imread(str(dataset_dir / f"/images/{index2}n.png"), cv2.IMREAD_COLOR)
 
-branch = cv2.imread(dataset_dir + f"/images/{index3}.png", cv2.IMREAD_COLOR)
-branch_depth = cv2.imread(dataset_dir + f"/images/{index3}d.png", cv2.IMREAD_GRAYSCALE)
-branch_normals = cv2.imread(dataset_dir + f"/images/{index3}n.png", cv2.IMREAD_COLOR)
+branch = cv2.imread(str(dataset_dir / f"/images/{index3}.png"), cv2.IMREAD_COLOR)
+branch_depth = cv2.imread(str(dataset_dir / f"/images/{index3}d.png"), cv2.IMREAD_GRAYSCALE)
+branch_normals = cv2.imread(str(dataset_dir / f"/images/{index3}n.png"), cv2.IMREAD_COLOR)
 
 # Make a PIL image
 road = PIL.Image.fromarray(road)
@@ -151,7 +147,7 @@ plt.scatter(velocities,
 plt.xlabel("Velocity [m/s]")
 plt.ylabel("Traversal cost")
 
-df = pd.read_csv(dataset_dir + "/traversal_costs.csv")
+df = pd.read_csv(dataset_dir / "/traversal_costs.csv")
 df_plot = df.plot(x=['linear_velocity'],y=['traversal_cost'],kind="scatter")
 
 plt.show()

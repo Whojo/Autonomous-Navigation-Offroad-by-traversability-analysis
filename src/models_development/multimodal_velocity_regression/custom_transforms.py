@@ -1,11 +1,11 @@
-import os
-import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+from torchvision import transforms
 import cv2
+
+from params import PROJECT_PATH
+
 
 class Cutout(object):
     """
@@ -13,7 +13,7 @@ class Cutout(object):
 
     Inputs : PIL Image
     """
-    def __init__(self, prob = 0.5):
+    def __init__(self, prob=0.5):
         
         self.prob = prob
 
@@ -21,7 +21,7 @@ class Cutout(object):
 
         p = np.random.uniform(0, 1)
 
-        if p <= self.prob :
+        if p <= self.prob:
 
             img_np = np.array(img)
             
@@ -52,13 +52,14 @@ class Cutout(object):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(p={self.prob})"
     
+
 class Shadowcasting(object):
     """
     Randomly mask out one or more patches from an image.
 
     Inputs : PIL Image
     """
-    def __init__(self, prob = 0.5):
+    def __init__(self, prob=0.5):
 
         self.prob = prob
 
@@ -66,7 +67,7 @@ class Shadowcasting(object):
         
         p = np.random.uniform(0, 1)
 
-        if p <= self.prob :
+        if p <= self.prob:
 
             img_np = np.array(img)
             
@@ -79,9 +80,9 @@ class Shadowcasting(object):
 
             left_right = np.random.binomial(1, 0.5)
 
-            if left_right == 1 :
+            if left_right == 1:
                 corner_up, corner_down = [0, 0], [0, h]
-            else :
+            else:
                 corner_up, corner_down = [w, 0], [w, h]
             
             value = np.random.uniform(50, 255)
@@ -99,13 +100,11 @@ class Shadowcasting(object):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(p={self.prob})"
     
+
 if __name__ == "__main__":
-    
     # Open the first image of the sample dataset
-    image = Image.open(
-        "/home/gabriel/PRE/datasets/dataset_multimodal_siamese_png/images/00000.png")
-    # image = Image.open(
-    #     "datasets/dataset_sample_bag/zed_node_rgb_image_rect_color/00000.png")
+    image = Image.open(str(PROJECT_PATH / "datasets/dataset_multimodal_siamese_png/images/00000.png"))
+    # image = Image.open(str(PROJECT_PATH / "datasets/dataset_sample_bag/zed_node_rgb_image_rect_color/00000.png"))
     
     # Create a new figure
     plt.figure()

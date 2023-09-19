@@ -1,12 +1,13 @@
 import torch
 
+from params import PROJECT_PATH
 
 #########################
 ## Learning parameters ##
 #########################
 
 # Define the data to be used
-DATASET = "../../../datasets/dataset_multimodal_siamese_png_filtered_hard/"
+DATASET = PROJECT_PATH / "datasets/dataset_multimodal_siamese_png_filtered_hard/"
 
 # Define splits size
 TRAIN_SIZE = 0.7
