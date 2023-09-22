@@ -1,11 +1,3 @@
-# ROS - Python librairies
-import rospy
-import cv_bridge
-import rosbag
-
-# Import useful ROS types
-from sensor_msgs.msg import Image
-
 # Python librairies
 import numpy as np
 import cv2

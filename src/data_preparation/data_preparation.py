@@ -13,7 +13,6 @@ import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 
-import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset, random_split
 

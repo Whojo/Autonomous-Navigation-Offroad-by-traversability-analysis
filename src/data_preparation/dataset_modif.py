@@ -1,6 +1,6 @@
 """
 
-Takes a dataset and allows to modify it as you fish by applying a statistical filtering to balance it.
+Takes a dataset and allows to modify it as you wish by applying a statistical filtering to balance it.
 Just launch it as a standalone and it'll do the job.
 
 """
