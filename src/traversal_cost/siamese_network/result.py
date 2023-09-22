@@ -171,6 +171,12 @@ def generate_log(dataset_directory: str,
         results_directory / "confidence_intervals.png",
         "PNG")
     
+    # Display the traversal costs order
+    cost_order = traversalcost.utils.display_traversal_cost_order(costs_df)
+
+    # Save the traversal costs order
+    cost_order.save(results_directory / "traversal_cost_order.png", "PNG")
+    
     # Save the model parameters
     torch.save(model.state_dict(),
                results_directory / params.siamese.PARAMS_FILE)

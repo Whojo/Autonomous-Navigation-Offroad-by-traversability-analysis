@@ -14,6 +14,26 @@ import params.traversal_cost
 import traversalcost.fourier
 
 
+def get_image_from_figure(figure: plt.Figure) -> Image:
+    """
+    Converts a matplotlib figure to a PIL image
+
+    Args:
+        figure (plt.Figure): The matplotlib figure to convert
+
+    Returns:
+        Image: The PIL image
+    """
+    image = io.BytesIO()
+    figure.savefig(image, format="png", bbox_inches="tight")
+    image.seek(0)
+    
+    # Create a PIL image from the image stream
+    image = Image.open(image)
+    
+    return image
+
+
 def get_features(roll_rate_values,
                  pitch_rate_values,
                  vertical_acceleration_values,
@@ -205,15 +225,7 @@ def display_traversal_costs(costs_df: pd.DataFrame) -> Image:
     plt.xlabel("Velocity [m/s]")
     plt.ylabel("Traversal cost")
     
-    # Converts the figure to an image
-    image = io.BytesIO()
-    figure.savefig(image, format="png", bbox_inches="tight")
-    image.seek(0)
-    
-    # Create a PIL image from the image stream
-    image = Image.open(image)
-    
-    return image
+    return get_image_from_figure(figure)
 
 
 def display_traversal_costs_whiskers(costs_df: pd.DataFrame) -> Image:
@@ -307,15 +319,7 @@ def display_traversal_costs_whiskers(costs_df: pd.DataFrame) -> Image:
     ax.set_xlabel("Velocity [m/s]")
     ax.set_ylabel("Traversal cost")
     
-    # Converts the figure to an image
-    image = io.BytesIO()
-    fig.savefig(image, format="png", bbox_inches="tight")
-    image.seek(0)
-    
-    # Create a PIL image from the image stream
-    image = Image.open(image)
-    
-    return image
+    return get_image_from_figure(fig)
 
 
 def display_confidence_intervals(costs_df: pd.DataFrame) -> Image:
@@ -337,7 +341,7 @@ def display_confidence_intervals(costs_df: pd.DataFrame) -> Image:
     
     # Get the list of the linear velocities
     velocities_unique = list(set(costs_df["linear_velocity"]))
-    
+
     # Open a figure
     figure = plt.figure()
     
@@ -397,16 +401,8 @@ def display_confidence_intervals(costs_df: pd.DataFrame) -> Image:
 
     plt.xlabel("Velocity [m/s]")
     plt.ylabel("Traversal cost")
-    
-    # Converts the figure to an image
-    image = io.BytesIO()
-    figure.savefig(image, format="png", bbox_inches="tight")
-    image.seek(0)
-    
-    # Create a PIL image from the image stream
-    image = Image.open(image)
-    
-    return image
+      
+    return get_image_from_figure(figure)
 
 
 def modulo_wrap(signal: list, N: int) -> list:
@@ -451,6 +447,54 @@ def modulo_wrap(signal: list, N: int) -> list:
             wrapped_signal[n] += signal[m*N + n]
     
     return wrapped_signal
+
+
+def _compute_alpha(velocity: float) -> float:
+    """
+    From velocities range of [0.2, 1] to alpha range of [0.5, 1],
+    Also revert the order (i.e. higher velocity -> lower alpha)
+    
+    Args:
+        velocity (float): linear velocity of the robot
+
+    Returns:
+        float: alpha value for the bar plot
+    """
+    return 1 - 0.5 * (velocity - 0.2) / 0.8
+
+
+def display_traversal_cost_order(cost_df: pd.DataFrame):
+    """
+    Display the traversal cost for each terrain class, ordered from the highest to the lowest.
+    The cost associated to higher linear velocity is represented by transparent bars in the background.
+
+    Args:
+        costs_df (pd.Dataframe): A dataframe containing the terrain classes, the
+        linear velocities of the robot and the traversal costs
+        (headers: "terrain_class", "linear_velocity", "cost")
+
+    Returns:
+        Image: An image of the figure
+    """
+    bar_width = 0.35
+
+    figure = plt.figure()
+
+    sorted_df = cost_df.groupby(["linear_velocity", "terrain_class"]).mean().sort_values("cost", ascending=False)
+    sorted_terrain_df = sorted_df.groupby("terrain_class", sort=False)
+    for i, (terrain, terrain_df) in enumerate(sorted_terrain_df):
+        for (velocity, _), cost in terrain_df.itertuples():
+            plt.bar(i, cost, bar_width, color=params.traversal_cost.colors[terrain],
+                    alpha=_compute_alpha(velocity))
+        
+    plt.ylabel("Traversal cost")
+
+    terrain_classes = sorted_terrain_df.indices.keys()
+    # Escape underscores for latex rendering
+    terrain_classes = list(map(lambda x: x.replace("_", r"\_"), terrain_classes))
+    plt.xticks(range(len(terrain_classes)), labels=terrain_classes, rotation=45, ha="right")
+
+    return get_image_from_figure(figure)
 
 
 # Main program

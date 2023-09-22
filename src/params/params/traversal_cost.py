@@ -6,15 +6,15 @@
 colors = {
     "road_easy": "black",
     "road_medium": "grey",
-    "forest_dirt_easy": "brown",
+    "forest_dirt_easy": "orangered",
     "dust": "orange",
-    "forest_leaves": "red",
+    "forest_leaves": "firebrick",
     "forest_dirt_medium": "darkgoldenrod",
-    "gravel_easy": "cyan",
-    "grass_easy": "lime",
-    "grass_medium": "limegreen",
-    "gravel_medium": "blue",
-    "forest_leaves_branches": "pink",
+    "gravel_easy": "dodgerblue",
+    "grass_easy": "limegreen",
+    "grass_medium": "darkgreen",
+    "gravel_medium": "royalblue",
+    "forest_leaves_branches": "indigo",
     "forest_dirt_stones_branches": "purple",
     }
 
