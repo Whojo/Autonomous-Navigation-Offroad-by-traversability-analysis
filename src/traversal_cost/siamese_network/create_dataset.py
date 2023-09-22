@@ -49,6 +49,8 @@ import params.siamese
 import params.robot
 import traversalcost.utils
 
+from pathlib import Path
+
 
 def print_message():
         """
@@ -147,6 +149,8 @@ class SiameseDatasetBuilder():
                 bag_files.extend(
                     [file + f for f in os.listdir(file) if f.endswith(".bag")])
         
+        self.example_index = 1110 # TODO: Delete me
+
         # Go through the bagfiles
         for file in bag_files:
             
@@ -190,16 +194,25 @@ class SiameseDatasetBuilder():
 
                 # Ask the user to enter the terrain class and the linear
                 # velocity of the robot
-                terrain_class = input(
-                    f"Enter the terrain class {params.siamese.ORDERED_TERRAIN_CLASSES}: "
+                terrain_class = Path(file).stem
+                terrain_class_str = input(
+                    "Enter the terrain class "
+                    f"among {params.siamese.ORDERED_TERRAIN_CLASSES}"
+                    f"(default to {terrain_class}): "
                 )
+                if terrain_class_str != "":
+                    terrain_class = terrain_class_str
+
                 linear_velocity = float(input(
                     f"Enter the linear velocity {params.siamese.LINEAR_VELOCITIES}[m/s]: "
                 ))
 
                 # Ask the user to enter the number of sub-regions to divide the
                 # selected region into
-                nb_subregions = int(input("Enter the number of sub-regions: "))
+                nb_subregions = 15
+                nb_subregions_str = input("Enter the number of sub-regions (default to 15): ")
+                if nb_subregions_str != "":
+                    nb_subregions = int(nb_subregions_str)
 
                 # Divide the selected region into sub-regions
                 x = np.linspace(xmin, xmax, nb_subregions + 1)
@@ -449,19 +462,20 @@ if __name__ == "__main__":
         # "bagfiles/raw_bagfiles/speed_dependency/grass.bag",
         # "bagfiles/raw_bagfiles/speed_dependency/road.bag",
         # "bagfiles/raw_bagfiles/speed_dependency/sand.bag",
-        # "bagfiles/raw_bagfiles/Terrains_Samples/"
+        # "bagfiles/raw_bagfiles/Terrains_Samples/sand_medium.bag",
+        # "bagfiles/raw_bagfiles/Terrains_Samples/sand_hard.bag",
         # "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves_branches.bag"
     ]
     
     # Choose between manual labeling or labeling from a csv file
-    # dataset.manual_labeling(files=files)
+    dataset.manual_labeling(files=files)
     
     # If you choose the labeling from a csv file, you must provide the csv
     # file which contains the labels. It allows us to extract new features
     # from already labeled signals
-    dataset.labeling_from_file(
-        csv_labels="src/traversal_cost/datasets/dataset_200Hz_variance/labels.csv",
-        files=files)
+    # dataset.labeling_from_file(
+    #     csv_labels="src/traversal_cost/datasets/dataset_200Hz_variance/labels.csv",
+    #     files=files)
     
     dataset.generate_features_description()
     
