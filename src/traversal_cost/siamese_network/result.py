@@ -149,12 +149,14 @@ def generate_log(dataset_directory: str,
         to_tensor=True)
     
     # Display the traversal costs
+    plt.figure()
     cost_graph = traversalcost.utils.display_traversal_costs(costs_df)
     
     # Save the traversal cost graph
     cost_graph.save(results_directory / "traversal_cost_graph.png", "PNG")
     
     # Display the whiskers
+    plt.figure()
     cost_whiskers =\
         traversalcost.utils.display_traversal_costs_whiskers(costs_df)
     
@@ -163,6 +165,7 @@ def generate_log(dataset_directory: str,
                        "PNG")
     
     # Display the confidence intervals
+    plt.figure()
     cost_confidence_intervals =\
         traversalcost.utils.display_confidence_intervals(costs_df)
     
@@ -172,6 +175,7 @@ def generate_log(dataset_directory: str,
         "PNG")
     
     # Display the traversal costs order
+    plt.figure()
     cost_order = traversalcost.utils.display_traversal_cost_order(costs_df)
 
     # Save the traversal costs order

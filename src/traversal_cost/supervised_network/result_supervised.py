@@ -146,6 +146,7 @@ def generate_log_2(dataset_directory: str,
                             to_tensor=True)
     
     # Display the traversal costs
+    plt.figure()
     #cost_graph = traversalcost.utils.display_traversal_costs(costs_df)
     cost_graph = utils_supervised.display_traversal_costs(costs_df, theoric = True, 
                                     dictionnary = params.supervised_learning.terrain_cost)
@@ -154,6 +155,7 @@ def generate_log_2(dataset_directory: str,
     cost_graph.save(results_directory + "/traversal_cost_graph.png", "PNG")
     
     # Display the whiskers
+    # plt.figure()
     #cost_whiskers = traversalcost.utils.display_traversal_costs_whiskers(costs_df)
     
     # Save the whiskers
@@ -228,18 +230,21 @@ def generate_log(dataset_directory: str,
         to_tensor=True)
     
     # Display the traversal costs
+    plt.figure()
     cost_graph = traversalcost.utils.display_traversal_costs(costs_df)
     
     # Save the traversal cost graph
     cost_graph.save(results_directory + "/traversal_cost_graph.png", "PNG")
     
     # Display the whiskers
+    plt.figure()
     cost_whiskers = traversalcost.utils.display_traversal_costs_whiskers(costs_df)
     
     # Save the whiskers
     cost_whiskers.save(results_directory + "/traversal_cost_whiskers.png", "PNG")
     
     # Display the confidence intervals
+    plt.figure()
     cost_confidence_intervals =\
         traversalcost.utils.display_confidence_intervals(costs_df)
     

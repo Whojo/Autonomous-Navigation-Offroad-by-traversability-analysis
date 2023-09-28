@@ -199,9 +199,6 @@ def display_traversal_costs(costs_df: pd.DataFrame) -> Image:
     # Get the list of the terrain classes
     labels_unique = list(set(costs_df["terrain_class"]))
     
-    # Open a figure
-    figure = plt.figure()
-
     # Go through the labels
     for label in labels_unique:
         
@@ -225,7 +222,7 @@ def display_traversal_costs(costs_df: pd.DataFrame) -> Image:
     plt.xlabel("Velocity [m/s]")
     plt.ylabel("Traversal cost")
     
-    return get_image_from_figure(figure)
+    return get_image_from_figure(plt.gcf())
 
 
 def display_traversal_costs_whiskers(costs_df: pd.DataFrame) -> Image:
@@ -252,9 +249,6 @@ def display_traversal_costs_whiskers(costs_df: pd.DataFrame) -> Image:
     
     # Get the list of the linear velocities
     velocities_unique = list(set(costs_df["linear_velocity"]))
-    
-    # Open a figure
-    fig, ax = plt.subplots()
     
     # Create a list of handles for the legend
     handles = []
@@ -291,7 +285,7 @@ def display_traversal_costs_whiskers(costs_df: pd.DataFrame) -> Image:
             # print(type(df[df["linear_velocity"] == velocity]["cost"].values))
             
             # Plot the boxplot
-            ax.boxplot(
+            plt.boxplot(
                 list(df[df["linear_velocity"] == velocity]["cost"]),
                 notch=0,
                 sym="",
@@ -304,25 +298,25 @@ def display_traversal_costs_whiskers(costs_df: pd.DataFrame) -> Image:
                 )
         
     # Set the limits of the axes
-    ax.set_xlim(np.min(velocities_unique) - 0.2,
+    plt.xlim(np.min(velocities_unique) - 0.2,
                 np.max(velocities_unique) + 0.2)
     
     # Set the ticks of the axes
-    ax.set_xticklabels(velocities_unique)
+    plt.xlabel(velocities_unique)
     
     # Set the legend
-    ax.legend(handles=handles,
+    plt.legend(handles=handles,
               bbox_to_anchor=(1, 1),
               loc="upper left")
     
     # Set the labels of the axes
-    ax.set_xlabel("Velocity [m/s]")
-    ax.set_ylabel("Traversal cost")
+    plt.xlabel("Velocity [m/s]")
+    plt.ylabel("Traversal cost")
     
-    return get_image_from_figure(fig)
+    return get_image_from_figure(plt.gcf())
 
 
-def display_confidence_intervals(costs_df: pd.DataFrame) -> Image:
+def display_confidence_intervals(costs_df: pd.DataFrame, no_legend: bool = False) -> Image:
     """Display the traversal costs of samples and the confidence interval.
     Each terrain class is represented by a different color.
     The linear velocity is represented on the x-axis and the traversal cost
@@ -332,6 +326,7 @@ def display_confidence_intervals(costs_df: pd.DataFrame) -> Image:
         costs_df (pd.Dataframe): A dataframe containing the terrain classes, the
         linear velocities of the robot and the traversal costs
         (headers: "terrain_class", "linear_velocity", "cost")
+        no_legend (bool, optional): If True, do not display the legend.
     
     Returns:
         Image: An image of the figure
@@ -342,9 +337,6 @@ def display_confidence_intervals(costs_df: pd.DataFrame) -> Image:
     # Get the list of the linear velocities
     velocities_unique = list(set(costs_df["linear_velocity"]))
 
-    # Open a figure
-    figure = plt.figure()
-    
     # Set some parameters for the plot
     MARKER_SIZE = 8
     OPACITY = 0.2
@@ -397,12 +389,13 @@ def display_confidence_intervals(costs_df: pd.DataFrame) -> Image:
                              mean_costs + confidence,
                              alpha=OPACITY)
 
-    plt.legend(bbox_to_anchor=(1, 1), loc="upper left")
+    if not no_legend:
+        plt.legend(bbox_to_anchor=(1, 1), loc="upper left")
 
     plt.xlabel("Velocity [m/s]")
     plt.ylabel("Traversal cost")
       
-    return get_image_from_figure(figure)
+    return get_image_from_figure(plt.gcf())
 
 
 def modulo_wrap(signal: list, N: int) -> list:
@@ -478,8 +471,6 @@ def display_traversal_cost_order(cost_df: pd.DataFrame):
     """
     bar_width = 0.35
 
-    figure = plt.figure()
-
     sorted_df = cost_df.groupby(["linear_velocity", "terrain_class"]).mean().sort_values("cost", ascending=False)
     sorted_terrain_df = sorted_df.groupby("terrain_class", sort=False)
     for i, (terrain, terrain_df) in enumerate(sorted_terrain_df):
@@ -494,7 +485,7 @@ def display_traversal_cost_order(cost_df: pd.DataFrame):
     terrain_classes = list(map(lambda x: x.replace("_", r"\_"), terrain_classes))
     plt.xticks(range(len(terrain_classes)), labels=terrain_classes, rotation=45, ha="right")
 
-    return get_image_from_figure(figure)
+    return get_image_from_figure(plt.gcf())
 
 
 # Main program
