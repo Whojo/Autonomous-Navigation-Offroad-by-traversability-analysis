@@ -206,10 +206,7 @@ class DatasetBuilder():
                     [file + f for f in os.listdir(file) if f.endswith(".bag")])
         
         # Go through multiple bag files
-        for file in bag_files:
-            
-            print("Reading file: " + file)
-            
+        for file in tqdm(bag_files):
             # Open the bag file
             bag = rosbag.Bag(file)
             
@@ -221,10 +218,7 @@ class DatasetBuilder():
                 continue
             
             # Go through the image topic
-            for _, msg_image, t_image in tqdm(
-                bag.read_messages(topics=[params.robot.IMAGE_TOPIC]),
-                total=bag.get_message_count(params.robot.IMAGE_TOPIC)):
-                
+            for _, msg_image, t_image in bag.read_messages(topics=[params.robot.IMAGE_TOPIC]):
                 # Define a variable to store the depth image
                 msg_depth = None
                 
@@ -738,7 +732,7 @@ class DatasetBuilder():
         #            "image_timestamp"]  #TODO:
         file_costs_writer.writerow(headers)
         
-        print(self.velocities, self.features)
+        # print(self.velocities, self.features)
 
         costs, labels = self.compute_traversal_costs()
         # costs, labels, slip_costs = self.compute_traversal_costs()
@@ -858,14 +852,35 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="multimodal_siamese_png_filtered_hard")
+    dataset = DatasetBuilder(name="multimodal_siamese_png_no_sand_filtered_hard")
     
     dataset.write_images_and_compute_features(
         files=[
-            "bagfiles/raw_bagfiles/Terrains_Samples/",
-            "bagfiles/raw_bagfiles/ENSTA_Campus/",
-            "bagfiles/raw_bagfiles/Palaiseau_Forest/",
-            "bagfiles/raw_bagfiles/Troche/",
+            ## Grass and roal only
+            # "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
+            # "bagfiles/raw_bagfiles/Terrains_Samples/grass_medium.bag",
+            # "bagfiles/raw_bagfiles/Terrains_Samples/road_easy.bag",
+            # "bagfiles/raw_bagfiles/Terrains_Samples/road_medium.bag",
+
+            ## No sand
+            "bagfiles/raw_bagfiles/Terrains_Samples/dust.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_easy.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_medium.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_stones_branches.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves_branches.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/grass_medium.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/gravel_easy.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/gravel_medium.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/road_easy.bag",
+            "bagfiles/raw_bagfiles/Terrains_Samples/road_medium.bag",
+
+            ## All
+            # "bagfiles/raw_bagfiles/Terrains_Samples/",
+            # "bagfiles/raw_bagfiles/ENSTA_Campus/",
+            # "bagfiles/raw_bagfiles/Palaiseau_Forest/",
+            # "bagfiles/raw_bagfiles/Troche/",
 
             #"bagfiles/raw_bagfiles/Terrains_Samples/troche_forest_hard_2023-05-30-13-44-49_0.bag",
             #"bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
