@@ -8,10 +8,8 @@ import sys
 from tqdm import tqdm
 
 # Importing custom made parameters
-from depth import utils as depth
-from params import dataset
 import utilities.frames as frames
-import visualparams as viz
+import params.visualparams as viz
 
 from params import PROJECT_PATH
 
@@ -33,7 +31,8 @@ transform_normal = viz.TRANSFORM_NORMAL
 device = viz.DEVICE
 
 model = viz.MODEL
-model.load_state_dict(torch.load(viz.WEIGHTS))
+WEIGHTS = "/home/g_thomas/Documents/PRE/src/models_development/multimodal_velocity_regression_alt/multimodal_velocity_no_sand_higher_T.params"
+model.load_state_dict(torch.load(WEIGHTS))
 model.eval()
 
 midpoints = viz.MIDPOINTS
@@ -160,7 +159,7 @@ def get_lists():
                 #Appending the rectangle to the list
                 rectangle_list[y,x] = np.array([rect_tl, rect_br])
 
-    return(rectangle_list, grid_list)
+    return rectangle_list, grid_list
 
 def predict_costs(img, img_depth, img_normals, rectangle_list, model):
     """
@@ -341,24 +340,29 @@ def display(img, costmap, costmap_by_hand, rectangle_list, grid_list, max_cost, 
     result = cv2.resize(result, (1792,1008))
 
     cv2.imshow("Result", result)
-    writer.write(result)
+    # writer.write(result)
     cv2.waitKey(0)
 
-files = np.load(input_dir / "files.npy")
-number_files = len(files)
+
+# directory = PROJECT_PATH / "bagfiles/images_extracted/from_terrain_samples"
+directory = PROJECT_PATH / "bagfiles/images_extracted"
+
+# Matches any file that ends with a number and .png
+# (i.e. only rgb images, not depth or normals)
+files = list(directory.glob("[!dn].png"))
+# files = list(directory.glob("*[!_d_n].png"))
 
 rectangle_list, grid_list = get_lists()
 
-writer = cv2.VideoWriter(str(PROJECT_PATH / "Testing_Results/output.avi"), cv2.VideoWriter_fourcc(*'XVID'), 0.5, (1792,1008))
+# writer = cv2.VideoWriter(str(PROJECT_PATH / "Testing_Results/output.avi"), cv2.VideoWriter_fourcc(*'XVID'), 0.5, (1792,1008))
+for file in files:
+    depth_name = directory / (file.stem + "d.png")
+    normal_name = directory / (file.stem + "n.png")
 
-for i in range(number_files) :
-    name = files[i]
-    depth_name = name[:-4] + "d.png"
-    normal_name = name[:-4] + "n.png"
-    img = cv2.imread(name)
-    img_depth = cv2.imread(depth_name, cv2.IMREAD_GRAYSCALE)
-    img_normal = cv2.imread(normal_name)
-    costmap_by_hand = np.load(input_dir / f"costmaps{i+1}.npy")
+    img = cv2.imread(str(file))
+    img_depth = cv2.imread(str(depth_name), cv2.IMREAD_GRAYSCALE)
+    img_normal = cv2.imread(str(normal_name))
+    costmap_by_hand = np.load(input_dir / f"costmaps{int(file.stem)}.npy")
 
     costmap, min_cost, max_cost = predict_costs(img, img_depth, img_normal, rectangle_list, model)
     print(np.mean(costmap[np.where(costmap != 0)]))
@@ -367,4 +371,4 @@ for i in range(number_files) :
 
     display(img, costmap, costmap_by_hand, rectangle_list, grid_list, max_cost, min_cost)
 
-writer.release()
+# writer.release()
