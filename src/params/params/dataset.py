@@ -19,9 +19,6 @@ NB_MESSAGES_THR = 0.08
 # Linear velocity threshold from which the robot is considered to be moving
 LINEAR_VELOCITY_THR = 0.05  # [m/s]
 
-# Maximum number of rectangles to be detected in an image
-NB_RECTANGLES_MAX = 3
-
 # Distance the robot travels within a patch
 PATCH_DISTANCE = 0.5  # [m]
 

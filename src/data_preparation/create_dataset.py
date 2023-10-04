@@ -320,7 +320,7 @@ class DatasetBuilder():
                     # Convert the quaternion into Euler angles
                     theta = tf.transformations.euler_from_quaternion(q)[2]
 
-                    # Create arrays to store left and write front
+                    # Create arrays to store left and right front
                     # wheels positions
                     point_left_world = np.copy(point_world)
                     point_right_world = np.copy(point_world)
@@ -386,9 +386,7 @@ class DatasetBuilder():
                     # If the distance is greater than the threshold and
                     # the number of rectangles extracted from the current
                     # image is less than the maximum number of rectangles
-                    if distance > params.dataset.PATCH_DISTANCE and \
-                       nb_rectangles < params.dataset.NB_RECTANGLES_MAX:
-                    
+                    if distance > params.dataset.PATCH_DISTANCE:
                         # Draw the points on the image
                         # image = dw.draw_points(image, points_image)
 
@@ -652,11 +650,6 @@ class DatasetBuilder():
                         # cv2.imshow("Image", cv2.resize(image, (1280, 720)))
                         # cv2.waitKey()
                     
-                    # Go to the next image if the maximum number of rectangular
-                    # images extracted has been reached
-                    elif nb_rectangles == params.dataset.NB_RECTANGLES_MAX:
-                        break
-                
                 #FIXME: to keep? (RNN)
                 # Increment the index of the current trajectory
                 index_trajectory += 1
@@ -852,7 +845,7 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="multimodal_siamese_png_no_sand_filtered_hard")
+    dataset = DatasetBuilder(name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit")
     
     dataset.write_images_and_compute_features(
         files=[
