@@ -32,7 +32,7 @@ PATCH_ANGLE_THR = 1  # [rad]
 RECTANGLE_RATIO = 3
 
 # Time during which the future trajectory is taken into account
-T = 10  # [s]
+T = 30  # [s]
 
 # Time interval to look for the depth image corresponding to the current rgb
 # image
