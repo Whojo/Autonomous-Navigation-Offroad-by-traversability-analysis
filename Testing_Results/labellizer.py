@@ -244,20 +244,17 @@ if __name__ == "__main__":
 
     # Matches any file that ends with a number and .png
     # (i.e. only rgb images, not depth or normals)
-    files = directory.glob("*[0-9].png")
-    files = list(map(str, files))
-
-    costmaps = np.zeros((len(files), viz.Y, viz.X))
+    files = list(directory.glob("[!nd].png"))
     rectangle_list, grid_list = get_lists()
 
     # Manually enters all costmaps
     # for i, file in enumerate(tqdm(files)):
-    #     img = cv2.imread(file)
-    #     costmaps[i, :, :] = enter_costs(img, rectangle_list)
-    #     np.save(directory / f"costmaps{i+1}", costmaps[i])
+    #     img = cv2.imread(str(file))
+    #     costmap = enter_costs(img, rectangle_list)
+    #     np.save(directory / f"costmaps{int(file.stem)}", costmap)
 
     # Displays all costmaps
-    for i, file in enumerate(files):
-        img = cv2.imread(file)
-        costmap = np.load(directory / f"costmaps{i+1}.npy")
+    for file in files:
+        img = cv2.imread(str(file))
+        costmap = np.load(directory / f"costmaps{int(file.stem)}.npy")
         display(img, costmap, rectangle_list, grid_list, np.max(costmap), np.min(costmap))
