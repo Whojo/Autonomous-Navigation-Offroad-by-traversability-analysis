@@ -14,8 +14,8 @@ coffee.jpg
 imagenet_class_labels.txt
 
 Notes.md
-# *.png
-# *.tiff
+*.png
+*.tiff
 
 # Saved model parameters
 *.params
