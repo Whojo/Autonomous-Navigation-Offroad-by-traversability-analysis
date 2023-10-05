@@ -14,7 +14,6 @@ import sys
 from tqdm import tqdm
 import cv2
 from PIL import Image
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 plt.rcParams['text.usetex'] = True  # Render Matplotlib text with Tex
 
@@ -63,21 +62,20 @@ def is_bag_healthy(bag: str) -> bool:
 
     return True
 
-if __name__ == "__main__":
-    
-    bridge = cv_bridge.CvBridge()
 
-    destination = PROJECT_PATH / "bagfiles/images_extracted/"
+if __name__ == "__main__":
+    bridge = cv_bridge.CvBridge()
+    destination = PROJECT_PATH / "bagfiles/images_extracted/from_terrain_samples"
 
     try:  # A new directory is created if it does not exist yet
-            os.mkdir(destination)
-            print(str(destination) + " folder created")
+        os.mkdir(destination)
+        print(str(destination) + " folder created")
 
     except OSError:  # Display a message if it already exists and quit
         print("Existing directory :" + str(destination))
 
     index = 0
-    bag_file = PROJECT_PATH / "bagfiles/raw_bagfiles/Troche/troche_2023-05-30-13-28-42_15.bag"
+    bag_file = PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/gravel_medium.bag"
     bag = rosbag.Bag(str(bag_file))
 
     if not is_bag_healthy(bag):
@@ -158,7 +156,8 @@ if __name__ == "__main__":
 
             # Give the depth image a name
             # depth_image_name = f"{index_image:05d}d.tiff"
-            depth_image_name = f"{index:05d}d.png"
+            # depth_image_name = f"{index:05d}d.png"
+            depth_image_name = f"{bag_file.stem}_d.png"
             # Save the depth image in the correct directory
             # tifffile.imwrite(self.images_directory +
             #                  "/" + depth_image_name,
@@ -170,7 +169,8 @@ if __name__ == "__main__":
 
             # Give the normal map a name
             # normal_map_name = f"{index_image:05d}n.tiff"
-            normal_map_name = f"{index:05d}n.png"
+            # normal_map_name = f"{index:05d}n.png"
+            normal_map_name = f"{bag_file.stem}_n.png"
             # Save the normal map in the correct directory
             # tifffile.imwrite(self.images_directory +
             #                  "/" + normal_map_name,
@@ -189,7 +189,7 @@ if __name__ == "__main__":
             # Make a PIL image
             image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
             # Give the image a name
-            image_name = f"{index:05d}.png"
+            image_name = f"{bag_file.stem}.png"
             # Save the image in the correct directory
             image.save(destination / image_name, "PNG")
 
