@@ -4,16 +4,12 @@ import cv2
 import torch
 import torch.nn as nn
 import PIL
-import sys
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
 
 # Importing custom made parameters
-from depth import utils as depth
-from params import dataset
-import utilities.frames as frames
-import visualparams as viz
+import params.visualparams as viz
+from params import PROJECT_PATH
 
 # Initializing some parameters for the model
 transform = viz.TRANSFORM
@@ -22,19 +18,19 @@ transform_normal = viz.TRANSFORM_NORMAL
 device = viz.DEVICE
 
 model = viz.MODEL
-model.load_state_dict(torch.load(viz.WEIGHTS))
-print("weights :", viz.WEIGHTS)
+_dataset = "multimodal_siamese_png_terrain_samples_filtered_hard"
+WEIGHTS = PROJECT_PATH / f"src/models_development/multimodal_velocity_regression_alt/logs/_{_dataset}/network.params"
+model.load_state_dict(torch.load(WEIGHTS))
 model.eval()
 
 velocities = np.linspace(0.2, 1, 5)
-print(velocities)
 score_road = np.zeros(velocities.shape)
 score_grass = np.zeros(velocities.shape)
 
 midpoints = viz.MIDPOINTS
 
-dataset_dir = viz.DATASET
-print("Dataset :", dataset_dir)
+dataset_dir = PROJECT_PATH / f"datasets/dataset_{_dataset}"
+
 index1 = "00022"
 index2 = "00207"
 road = cv2.imread(str(dataset_dir / f"images/{index1}.png"), cv2.IMREAD_COLOR)
