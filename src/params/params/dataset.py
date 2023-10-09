@@ -28,6 +28,9 @@ PATCH_ANGLE_THR = 1  # [rad]
 # Ratio between the width and the height of a rectangle
 RECTANGLE_RATIO = 3
 
+# Minimum width of a rectangle patch
+MIN_WIDTH = 210  # [px]
+
 # Time during which the future trajectory is taken into account
 T = 30  # [s]
 

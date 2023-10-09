@@ -39,19 +39,11 @@ import sys
 from tqdm import tqdm
 import cv2
 from PIL import Image
-from scipy.fft import rfft, rfftfreq
-from scipy.ndimage import uniform_filter1d
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler,\
-                                  RobustScaler,\
-                                  OneHotEncoder,\
-                                  KBinsDiscretizer
+from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.model_selection import train_test_split
 import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
-plt.rcParams['text.usetex'] = True  # Render Matplotlib text with Tex
-import tifffile
 
 # ROS Python libraries
 import cv_bridge
@@ -59,8 +51,9 @@ import rosbag
 import rospy
 import tf.transformations
 
+from collections import namedtuple
+
 # Custom modules and packages
-import utilities.drawing as dw
 import utilities.frames as frames
 from depth.utils import Depth
 import traversalcost.utils
@@ -69,6 +62,8 @@ import params.robot
 import params.dataset
 import params.traversal_cost
 import params.learning
+
+plt.rcParams['text.usetex'] = True  # Render Matplotlib text with Tex
 
 
 def is_bag_healthy(bag: str) -> bool:
@@ -117,7 +112,57 @@ def is_inside_image(image: np.ndarray, point: np.ndarray) -> bool:
     return (x >= 0) and\
            (x < image.shape[1]) and\
            (y >= 0) and\
-           (y < image.shape[0])\
+           (y < image.shape[0])
+
+
+RectangleDim = namedtuple("RectangleDim", ["min_x", "max_x", "min_y", "max_y"])
+
+
+def _get_outter_rectangle(points_image_old: np.array, points_image: np.array) -> RectangleDim:
+    all_points = np.vstack((points_image_old, points_image))
+
+    max_y = np.max(all_points[:, 1])
+    min_y = np.min(all_points[:, 1])
+    min_x = np.min([all_points[:, 0]])
+    max_x = np.max([all_points[:, 0]])
+    
+    return RectangleDim(min_x, max_x, min_y, max_y)
+    
+
+def _to_valid_patch_dimension(rec: RectangleDim) -> RectangleDim:
+    min_x, max_x, min_y, max_y = rec
+    
+    center_x = (min_x + max_x) / 2
+    center_y = (min_y + max_y) / 2
+
+    width = max(max_x - min_x, params.dataset.MIN_WIDTH)
+    height = width / params.dataset.RECTANGLE_RATIO
+
+    min_x = int(center_x - (width / 2))
+    max_x = int(center_x + (width / 2))
+    min_y = int(center_y - (height / 2))
+    max_y = int(center_y + (height / 2))
+
+    return RectangleDim(min_x, max_x, min_y, max_y)
+
+
+def get_patch_dimension(points_image_old: np.array, points_image: np.array) -> RectangleDim:
+    """
+    Return a new minimal rectangle patch that
+    1. includes all the points
+    2. with a minimal width of params.dataset.MIN_WIDTH and a width / height 
+    ratio of params.dataset.RECTANGLE_RATIO The center of the outputted rectangle
+    is the same as the inputted one
+    
+    Args:
+        points_image_old: np.array of shape (N, 2) of points in the old image
+        points_image: np.array of shape (N, 2) of points in the new image
+        
+    Returns:
+        RectangleDim: namedtuple of (min_x, max_x, min_y, max_y) of the new rectangle
+    """
+    rec = _get_outter_rectangle(points_image_old, points_image)
+    return _to_valid_patch_dimension(rec)
 
 
 class DatasetBuilder():
@@ -143,7 +188,6 @@ class DatasetBuilder():
     
     # Create an array to store the pitch rate variance
     pitch_rate_variance = np.zeros((params.dataset.NB_IMAGES_MAX, 1))
-    
     
     def __init__(self, name: str) -> None:
         """Constructor of the class
@@ -179,7 +223,6 @@ class DatasetBuilder():
         # Create a csv file to store the traversal costs
         self.csv_name = self.dataset_directory + "/traversal_costs.csv"
      
-    
     def write_images_and_compute_features(self, files: list) -> None:
         """Write images and compute features from a list of bag files
 
@@ -366,7 +409,6 @@ class DatasetBuilder():
                     
                     # First point in the image
                     if point_world_old is None:
-                        # Draw the points on the image
                         # image = dw.draw_points(image, points_image)
 
                         # Set the previous points to the current ones
@@ -375,286 +417,181 @@ class DatasetBuilder():
                         t_odom_old = t_odom
                         continue
                     
-                    # Compute the distance traveled by the robot between
-                    # the current robot position and the previous one
-                    distance = np.linalg.norm(point_world -
-                                              point_world_old)
-                    
-                    # Get the linear velocity on x axis
                     x_velocity.append(msg_odom.twist.twist.linear.x)
                     
-                    # If the distance is greater than the threshold and
-                    # the number of rectangles extracted from the current
-                    # image is less than the maximum number of rectangles
-                    if distance > params.dataset.PATCH_DISTANCE:
-                        # Draw the points on the image
-                        # image = dw.draw_points(image, points_image)
+                    distance = np.linalg.norm(point_world - point_world_old)
+                    if distance <= params.dataset.PATCH_DISTANCE:
+                        continue
 
-                        #Check if the velocity on the patch means something coherent : i.e. if the robot is not doing a round trip or other black magic.
-                        x_velocity_array = np.array(x_velocity)
+                    # image = dw.draw_points(image, points_image)
 
-                        #coherence = np.all(np.isclose(x_velocity, np.full(len(x_velocity), np.mean(x_velocity)), rtol=0.15))
-                        
-                        qup, qdown = np.percentile(x_velocity_array, [90, 10])
-                        q_thresh = 0.08
-                        coherence = (qdown > np.mean(x_velocity)*(1.0-q_thresh)) and (qup < np.mean(x_velocity)*(1.0+q_thresh))
+                    #Check if the velocity on the patch means something coherent : i.e. if the robot is not doing a round trip or other black magic.
+                    x_velocity_array = np.array(x_velocity)
+                    qup, qdown = np.percentile(x_velocity_array, [90, 10])
+                    q_thresh = 0.08
 
-                        cohesion = (np.all(x_velocity_array > 0) if x_velocity_array[0] > 0 else np.all(x_velocity_array < 0))
+                    coherence = (qdown > np.mean(x_velocity)*(1.0-q_thresh)) and (qup < np.mean(x_velocity)*(1.0+q_thresh))
+                    cohesion = (np.all(x_velocity_array > 0) if x_velocity_array[0] > 0 else np.all(x_velocity_array < 0))
 
-                        if (not coherence) or (not cohesion) :
-                            
-                            # Reset velocities
-                            x_velocity = []
-
-                            # Update the old values
-                            point_world_old = point_world
-                            points_image_old = points_image
-                            t_odom_old = t_odom
-                            
-                            continue
-
-                        # Compute the inclination of the patch in the image
-                        delta_old = np.abs(points_image_old[0] - points_image_old[1])
-                        delta_current = np.abs(points_image[0] - points_image[1])
-                        
-                        patch_angle = (
-                            np.arctan(delta_old[1]/delta_old[0]) +
-                            np.arctan(delta_current[1]/delta_current[0])
-                            )/2
-                        
-                        # Discard rectangles that are too inclined
-                        if patch_angle > params.dataset.PATCH_ANGLE_THR:
-                            break
-                        
-                        # Compute the maximum and minimum coordinates on the
-                        # y axis of the image plan
-                        max_y = np.int32(np.max(points_image_old, axis=0)[1])
-                        min_y = np.int32(np.min(points_image, axis=0)[1])
-
-                        # Compute max and min coordinates of the points in
-                        # the image along the x axis
-                        min_x = np.int32(np.min([points_image_old[:, 0],
-                                                 points_image[:, 0]]))
-                        max_x = np.int32(np.max([points_image_old[:, 0],
-                                                 points_image[:, 0]]))
-                         
-                        # Correct the dimensions of the rectangle to respect
-                        # the height-width ratio
-                        rectangle_width = max_x - min_x
-                        rectangle_height = max_y - min_y
-                        
-                        if rectangle_width < \
-                           params.dataset.RECTANGLE_RATIO*(rectangle_height):
-                            # Height of the rectangular regions to be
-                            # eliminated on the right and left of the
-                            # patch
-                            delta = np.int32((
-                                rectangle_height -
-                                (rectangle_width)/params.dataset.RECTANGLE_RATIO
-                                )/2)
-                            
-                            # Coordinates of the vertices of the patch to keep
-                            min_y_rectangle = min_y + delta
-                            max_y_rectangle = max_y - delta
-                            min_x_rectangle = min_x
-                            max_x_rectangle = max_x
-                        
-                        else:
-                            # Width of the rectangular regions to be
-                            # eliminated at the top and bottom of the
-                            # patch
-                            delta = np.int32((
-                                rectangle_width -
-                                params.dataset.RECTANGLE_RATIO*(rectangle_height)
-                                )/2)
-                            
-                            # Coordinates of the vertices of the patch to keep
-                            min_x_rectangle = min_x + delta
-                            max_x_rectangle = max_x - delta
-                            min_y_rectangle = min_y
-                            max_y_rectangle = max_y
-                            
-                        # Draw a rectangle in the image to visualize the region
-                        # of interest
-                        # image = dw.draw_quadrilateral(
-                        #     image,
-                        #     np.array([[min_x_rectangle, max_y_rectangle],
-                        #               [min_x_rectangle, min_y_rectangle],
-                        #               [max_x_rectangle, min_y_rectangle],
-                        #               [max_x_rectangle, max_y_rectangle]]),
-                        #     color=(255, 0, 0))
-                        
-                        # Set of points forming the quadrilateral
-                        quadrilateral_points = np.array([
-                            [points_image_old[0]],
-                            [points_image_old[1]],
-                            [points_image[1]],
-                            [points_image[0]]
-                        ], dtype=np.int32)
-                        
-                        # Compute the minimum area rectangle containing the set
-                        rect = cv2.minAreaRect(quadrilateral_points)
-                        
-                        # Convert the rectangle to a set of 4 points
-                        box = cv2.boxPoints(rect)
-                        
-                        # Draw the rectangle on the image
-                        # image = dw.draw_quadrilateral(image,
-                        #                               box,
-                        #                               color=(0, 255, 0),
-                        #                               thickness=1)
-                        
-                        # Extract the rectangular region of interest from
-                        # the original image
-
-                        image_to_save = image[min_y_rectangle:max_y_rectangle,
-                                              min_x_rectangle:max_x_rectangle]
-                        
-                        if image_to_save.size == 0 :
-                            break
-                        
-                        #cv2.imshow("rgb", image_to_save)
-                        #cv2.waitKey(0)
-                        
-                        # Convert the image from BGR to RGB
-                        image_to_save = cv2.cvtColor(image_to_save,
-                                                     cv2.COLOR_BGR2RGB)
-
-                        # Make a PIL image
-                        image_to_save = Image.fromarray(image_to_save)
-                        # Give the image a name
-                        image_name = f"{index_image:05d}.png"
-                        # Save the image in the correct directory
-                        image_to_save.save(self.images_directory +
-                                           "/" + image_name, "PNG")
-                        
-                        # Extract the rectangular region of interest from
-                        # the original depth image
-                        depth_image_crop = depth_image[
-                            min_y_rectangle:max_y_rectangle,
-                            min_x_rectangle:max_x_rectangle]
-                        
-                        # Create a Depth object
-                        depth = Depth(depth_image_crop.copy(),
-                                      params.dataset.DEPTH_RANGE)
-                        
-                        # Compute the surface normals
-                        depth.compute_normal(
-                            K=params.robot.K,
-                            bilateral_filter=params.dataset.BILATERAL_FILTER,
-                            gradient_threshold=params.dataset.GRADIENT_THR)
-                        
-                        # depth.display_depth()
-                        # depth.display_normal()
-                        
-                        # Give the depth image a name
-                        # depth_image_name = f"{index_image:05d}d.tiff"
-                        depth_image_name = f"{index_image:05d}d.png"
-                        # Save the depth image in the correct directory
-                        # tifffile.imwrite(self.images_directory +
-                        #                  "/" + depth_image_name,
-                        #                  depth.get_depth())
-                        depth_to_save = depth.get_depth(
-                            fill=True,
-                            default_depth=params.dataset.DEPTH_RANGE[0],
-                            convert_range=True)
-                         
-                        # Make a PIL image
-                        depth_to_save = Image.fromarray(depth_to_save)
-                        # Save the image in the correct directory
-                        depth_to_save.save(self.images_directory +
-                                           "/" + depth_image_name, "PNG")
-                        
-                        # Give the normal map a name
-                        # normal_map_name = f"{index_image:05d}n.tiff"
-                        normal_map_name = f"{index_image:05d}n.png"
-                        # Save the normal map in the correct directory
-                        # tifffile.imwrite(self.images_directory +
-                        #                  "/" + normal_map_name,
-                        #                  depth.get_normal())
-                        normal_to_save = depth.get_normal(
-                            fill=True,
-                            default_normal=params.dataset.DEFAULT_NORMAL,
-                            convert_range=True)
-                        
-                        # Convert the image from BGR to RGB
-                        normal_to_save = cv2.cvtColor(
-                            normal_to_save,
-                            cv2.COLOR_BGR2RGB)
-                        
-                        # Make a PIL image
-                        normal_to_save = Image.fromarray(normal_to_save)
-                        # Save the image in the correct directory
-                        normal_to_save.save(self.images_directory +
-                                            "/" + normal_map_name, "PNG")
-                        
-
-                        # Increment the number of rectangular images extracted
-                        # from the image
-                        nb_rectangles += 1
-                        
-                        # Define lists to store IMU signals
-                        roll_velocity_values = []
-                        pitch_velocity_values = []
-                        vertical_acceleration_values = []
-                        
-                        # Read the IMU measurements within the dt second(s)
-                        # interval
-                        for _, msg_imu, _ in bag.read_messages(
-                            topics=[params.robot.IMU_TOPIC],
-                            start_time=t_odom_old,
-                            end_time=t_odom):
-
-                            # Append angular velocities and vertical
-                            # acceleration to the previously created lists
-                            roll_velocity_values.append(
-                                msg_imu.angular_velocity.x)
-                            pitch_velocity_values.append(
-                                msg_imu.angular_velocity.y)
-                            vertical_acceleration_values.append(
-                                msg_imu.linear_acceleration.z - 9.81)
-                        
-                        
-                        # Extract features from the IMU signals and fill the
-                        # features array
-                        self.features[index_image] =\
-                            traversalcost.utils.get_features(
-                                roll_velocity_values,
-                                pitch_velocity_values,
-                                vertical_acceleration_values,
-                                params.dataset.FEATURES)
-
-                        # Compute the variance of the pitch rate signal
-                        self.pitch_rate_variance[index_image] =\
-                            np.var(pitch_velocity_values)
-
-                        # Compute the mean velocity on the current patch
-                        self.velocities[index_image] = np.mean(x_velocity)
-                        
-                        #FIXME: to keep? (RNN)
-                        # self.features[index_image, 13] = index_trajectory
-                        # self.features[index_image, 14] = t_image.to_sec() 
-
-                        # Increment the index of the current image
-                        index_image += 1
-                        
-                        # Reset the list of x velocities
+                    if (not coherence) or (not cohesion) :
                         x_velocity = []
-                        
+
                         # Update the old values
                         point_world_old = point_world
                         points_image_old = points_image
                         t_odom_old = t_odom
+                        
+                        continue
 
-                        # Display the image
-                        # cv2.imshow("Image", cv2.resize(image, (1280, 720)))
-                        # cv2.waitKey()
+                    # Compute the inclination of the patch in the image
+                    delta_old = np.abs(points_image_old[0] - points_image_old[1])
+                    delta_current = np.abs(points_image[0] - points_image[1])
+                    
+                    patch_angle = (
+                        np.arctan(delta_old[1]/delta_old[0]) +
+                        np.arctan(delta_current[1]/delta_current[0])
+                        )/2
+                    
+                    # Discard rectangles that are too inclined
+                    if patch_angle > params.dataset.PATCH_ANGLE_THR:
+                        break
+                    
+                    patch = get_patch_dimension(points_image_old, points_image)
+
+                    if not is_inside_image(image, (patch.max_x, patch.max_y)) or \
+                       not is_inside_image(image, (patch.min_x, patch.max_y)):
+                        break
+                    
+                    if not is_inside_image(image, (patch.max_x, patch.min_y)) or \
+                       not is_inside_image(image, (patch.min_x, patch.min_y)):
+                        continue
+                        
+                    # Draw a rectangle in the image to visualize the region
+                    # of interest
+                    # image = dw.draw_quadrilateral(
+                    #     image,
+                    #     np.array([[patch.min_x, patch.max_y],
+                    #               [patch.min_x, patch.min_y],
+                    #               [patch.max_x, patch.min_y],
+                    #               [patch.max_x, patch.max_y]]),
+                    #     color=(255, 0, 0))
+                    
+                    image_to_save = image[patch.min_y:patch.max_y,
+                                          patch.min_x:patch.max_x]
+                    
+                    #cv2.imshow("rgb", image_to_save)
+                    #cv2.waitKey(0)
+                    
+                    image_to_save = cv2.cvtColor(image_to_save,
+                                                 cv2.COLOR_BGR2RGB)
+
+                    image_to_save = Image.fromarray(image_to_save)
+                    image_name = f"{index_image:05d}.png"
+                    image_to_save.save(self.images_directory +
+                                       "/" + image_name, "PNG")
+                    
+                    # Extract the rectangular region of interest from
+                    # the original depth image
+                    depth_image_crop = depth_image[
+                        patch.min_y:patch.max_y,
+                        patch.min_x:patch.max_x]
+                    
+                    depth = Depth(depth_image_crop.copy(),
+                                  params.dataset.DEPTH_RANGE)
+                    depth.compute_normal(
+                        K=params.robot.K,
+                        bilateral_filter=params.dataset.BILATERAL_FILTER,
+                        gradient_threshold=params.dataset.GRADIENT_THR)
+                    
+                    # depth.display_depth()
+                    # depth.display_normal()
+                    
+                    depth_image_name = f"{index_image:05d}d.png"
+                    depth_to_save = depth.get_depth(
+                        fill=True,
+                        default_depth=params.dataset.DEPTH_RANGE[0],
+                        convert_range=True)
+                     
+                    depth_to_save = Image.fromarray(depth_to_save)
+                    depth_to_save.save(self.images_directory +
+                                       "/" + depth_image_name, "PNG")
+                    
+                    normal_map_name = f"{index_image:05d}n.png"
+                    normal_to_save = depth.get_normal(
+                        fill=True,
+                        default_normal=params.dataset.DEFAULT_NORMAL,
+                        convert_range=True)
+                    
+                    # Convert the image from BGR to RGB
+                    normal_to_save = cv2.cvtColor(
+                        normal_to_save,
+                        cv2.COLOR_BGR2RGB)
+                    
+                    normal_to_save = Image.fromarray(normal_to_save)
+                    normal_to_save.save(self.images_directory +
+                                        "/" + normal_map_name, "PNG")
+                    
+                    nb_rectangles += 1
+                    
+                    # Define lists to store IMU signals
+                    roll_velocity_values = []
+                    pitch_velocity_values = []
+                    vertical_acceleration_values = []
+                        
+                    # Read the IMU measurements within the dt second(s)
+                    # interval
+                    for _, msg_imu, _ in bag.read_messages(
+                        topics=[params.robot.IMU_TOPIC],
+                        start_time=t_odom_old,
+                        end_time=t_odom):
+
+                        # Append angular velocities and vertical
+                        # acceleration to the previously created lists
+                        roll_velocity_values.append(
+                            msg_imu.angular_velocity.x)
+                        pitch_velocity_values.append(
+                            msg_imu.angular_velocity.y)
+                        vertical_acceleration_values.append(
+                            msg_imu.linear_acceleration.z - 9.81)
+                    
+                    
+                    # Extract features from the IMU signals and fill the
+                    # features array
+                    self.features[index_image] =\
+                        traversalcost.utils.get_features(
+                            roll_velocity_values,
+                            pitch_velocity_values,
+                            vertical_acceleration_values,
+                            params.dataset.FEATURES)
+
+                    # Compute the variance of the pitch rate signal
+                    self.pitch_rate_variance[index_image] =\
+                        np.var(pitch_velocity_values)
+
+                    # Compute the mean velocity on the current patch
+                    self.velocities[index_image] = np.mean(x_velocity)
+                    
+                    #FIXME: to keep? (RNN)
+                    # self.features[index_image, 13] = index_trajectory
+                    # self.features[index_image, 14] = t_image.to_sec() 
+
+                    # Increment the index of the current image
+                    index_image += 1
+                    
+                    # Reset the list of x velocities
+                    x_velocity = []
+                    
+                    # Update the old values
+                    point_world_old = point_world
+                    points_image_old = points_image
+                    t_odom_old = t_odom
+
+                    # cv2.imshow("Image", cv2.resize(image, (1280, 720)))
+                    # cv2.waitKey()
                     
                 #FIXME: to keep? (RNN)
-                # Increment the index of the current trajectory
                 index_trajectory += 1
 
-            # Close the bag file
             bag.close()
         
         # Keep only the rows that are not filled with zeros
@@ -665,7 +602,6 @@ class DatasetBuilder():
     
     
     def compute_traversal_costs(self):
-        
         # Load a model
         model = traversalcost.traversal_cost.SiameseNetwork(
             input_size=self.features_size)
@@ -845,7 +781,7 @@ class DatasetBuilder():
 # this file is imported in another one
 if __name__ == "__main__":
     
-    dataset = DatasetBuilder(name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit")
+    dataset = DatasetBuilder(name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch")
     
     dataset.write_images_and_compute_features(
         files=[

@@ -1,5 +1,6 @@
 import torch
 
+import params.dataset
 from params import PROJECT_PATH
 
 #########################
@@ -26,7 +27,10 @@ LEARNING = {"batch_size": 32,
 ## Images' transforms parameters ##
 ####################################
 
-IMAGE_SHAPE = (70, 210)
+IMAGE_SHAPE = (
+    params.dataset.MIN_WIDTH // params.dataset.RECTANGLE_RATIO,
+    params.dataset.MIN_WIDTH
+)
 
 JITTER_PARAMS = {"brightness": 0.5,
                  "contrast": 0.5}
