@@ -1,12 +1,10 @@
 # Self-supervised learning of terrain traversals costs for an Unmanned Ground Vehicle (UGV)
-
 This repository contains the source code of the application Tom Ravaud and Gabriel Métois have been working on during their internship in the Computer Science and Systems Engineering Laboratory (U2IS), ENSTA Paris.
 
 This project is about learning to estimate terrain traversability from vision for a mobile robot using a self-supervised approach.
 
 
 # Code overview
-
 - `bagfiles` contains the raw data as bagfiles and some helper scripts.
   - `raw_bagfiles` contains the ROSbags from which the data can be extracted to build a dataset
   - `images_extracted` contains some images extracted by hand and their respective data labelled by the user himself for result measurement purpose
@@ -48,7 +46,6 @@ This project is about learning to estimate terrain traversability from vision fo
 
 
 # Code usage
-
 Assuming you have ROS Noetic installed and some rosbags at hand for the training :
 
 1- Go in the parameters `src/params` and set up all the variable following your preferences or your hardware configuration
@@ -75,8 +72,17 @@ Assuming you have ROS Noetic installed and some rosbags at hand for the training
 
 12- Profit!
 
-# TO-DO
+# Tests
+You can easily run the tests by running the following command in the root folder of the project:
+```sh
+pytest tests
+```
 
+The architecture of the `tests/` folder is copying the one of the root folder. Each test file has the following name `./tests/dir/subdir/test_<name_of_the_file_to_test>.py`, for the corresponding file: `./dir/subdir/<name_of_the_file_to_test>.py`.
+
+Not all files are being tested for now, but tests are being added progressively.
+
+# TO-DO
 - Although the current state of the git indicates an extensive research and training, there's always room for improvement through more data collection, new custom transforms and new models.
 
 - the ros node actually just gather a costmap from the network output. The next big step would be to add the output as a layer of costmap and pack it in an usable navigation plugin.
