@@ -15,6 +15,7 @@ BUFFER_SIZE=2048  # [MB, default: 256]
 # Set the list of topics to be recorded
 TOPICS="/zed_node/depth/depth_registered
         /odometry/filtered/local
+        /husky_velocity_controller/odom
         /zed_node/rgb/image_rect_color
         /imu/data"
 
