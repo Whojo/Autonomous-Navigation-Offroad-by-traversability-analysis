@@ -224,11 +224,22 @@ class DatasetBuilder:
         # Create a csv file to store the traversal costs
         self.csv_name = self.dataset_directory + "/traversal_costs.csv"
 
-    def write_images_and_compute_features(self, files: list) -> None:
+    def write_images_and_compute_features(
+        self,
+        files: list,
+        *,
+        filter_cohesion: bool = True,
+        filter_coherence: bool = True,
+    ) -> None:
         """Write images and compute features from a list of bag files
 
         Args:
             files (list): List of bag files
+            filter_cohesion (bool, optional): If True, discard images that do
+                not share the same sign of velocity. Default to True.
+            filter_coherence (bool, optional): If True, discard images with a
+                non-coherent velocity on the patch (i. e. extremum velocity are
+                too far from the mean). Default to True.
         """
         # Initialize the index of the image and the trajectory
         index_image = 0
@@ -350,10 +361,6 @@ class DatasetBuilder:
                 # rectangular patch
                 x_velocity = []
 
-                # Initialize the number of rectangles extracted from the
-                # current image
-                nb_rectangles = 0
-
                 # Read the odometry measurement for T second(s)
                 for i, (_, msg_odom, t_odom) in enumerate(
                     bag.read_messages(
@@ -465,7 +472,9 @@ class DatasetBuilder:
                         else np.all(x_velocity_array < 0)
                     )
 
-                    if (not coherence) or (not cohesion):
+                    if (filter_coherence and not coherence) or (
+                        filter_cohesion and not cohesion
+                    ):
                         x_velocity = []
 
                         # Update the old values
@@ -565,8 +574,6 @@ class DatasetBuilder:
                     normal_to_save.save(
                         self.images_directory + "/" + normal_map_name, "PNG"
                     )
-
-                    nb_rectangles += 1
 
                     # Define lists to store IMU signals
                     roll_velocity_values = []
@@ -814,7 +821,7 @@ class DatasetBuilder:
 # this file is imported in another one
 if __name__ == "__main__":
     dataset = DatasetBuilder(
-        name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch"
+        name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion"
     )
 
     dataset.write_images_and_compute_features(
@@ -846,7 +853,9 @@ if __name__ == "__main__":
             # "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
             # "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-14-05-20_0.bag"
             # "bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
-        ]
+        ],
+        filter_coherence=False,
+        filter_cohesion=False,
     )
 
     dataset.write_traversal_costs()
