@@ -38,6 +38,9 @@ T = 30  # [s]
 # image
 TIME_DELTA = 0.05  # [s]
 
+# Manual velocity labels of extracted IMU sequences
+LABELS_PATH = "src/traversal_cost/datasets/dataset_200Hz_wrap_fft/labels.csv"
+
 
 ##########################################
 ## Features extraction from IMU signals ##
@@ -49,22 +52,26 @@ TIME_DELTA = 0.05  # [s]
 # (the output of the function must be a numpy array of shape (n,) or a list
 # of length n, n being the number of features)
 params = {}
-FEATURES = {"function": traversalcost.features.wrapped_signal_fft,
-            "params_roll_rate": params,
-            "params_pitch_rate": params,
-            "params_vertical_acceleration": params}
+FEATURES = {
+    "function": traversalcost.features.wrapped_signal_fft,
+    "params_roll_rate": params,
+    "params_pitch_rate": params,
+    "params_vertical_acceleration": params,
+}
 
 
 ##################################################
 ## Traversal cost computation from the features ##
 ##################################################
 
-#-------------------#
+# -------------------#
 #  Siamese Network  #
-#-------------------#
+# -------------------#
 
 # Path to the parameters file
-SIAMESE_PARAMS = "src/traversal_cost/siamese_network/logs/_2023-09-27-12-22-04/siamese.params"
+SIAMESE_PARAMS = (
+    "src/traversal_cost/siamese_network/logs/_2023-09-27-12-22-04/siamese.params"
+)
 
 # Use GPU if available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

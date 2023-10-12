@@ -52,6 +52,8 @@ import rospy
 import tf.transformations
 
 from collections import namedtuple
+from enum import Enum
+from functools import lru_cache
 
 # Custom modules and packages
 import utilities.frames as frames
@@ -63,8 +65,13 @@ import params.dataset
 import params.traversal_cost
 import params.learning
 
+from params import PROJECT_PATH
+
+
 plt.rcParams["text.usetex"] = True  # Render Matplotlib text with Tex
 
+
+VelocityType = Enum("VelocityType", ["ODOMETRIC", "MANUAL"])
 RectangleDim = namedtuple("RectangleDim", ["min_x", "max_x", "min_y", "max_y"])
 
 
@@ -145,6 +152,109 @@ def _get_msg_depth(bag: rosbag.Bag, t_image: rospy.Time) -> np.array:
             msg_depth = msg_depth_i
 
     return msg_depth
+
+
+def _get_sequence_extremum(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns a DataFrame containing the start and end indexes of each sequence
+    of indexes from the input DataFrame, along with their corresponding
+    velocity values. A sequence is defined as a set of consecutive rows
+    with the same velocity value and whose "end_index" match the next
+    "start_index".
+
+    Note that in the data collection script which produces the labels.csv file,
+    the robot is alternatively moving forward and backward. Therefore, the
+    velocity values are alternatively positive and negative.
+
+    Args:
+    - df: input DataFrame containing start_index, end_index, and
+        linear_velocity columns
+
+    Returns:
+    - result_df: DataFrame containing start_index, end_index, and
+        linear_velocity columns
+    """
+    start_index = df["start_index"] != df["end_index"].shift(1)
+    end_index = df["end_index"] != df["start_index"].shift(-1)
+
+    result_df = pd.DataFrame(
+        df.loc[start_index, "start_index"].reset_index(drop=True),
+        columns=["start_index"],
+    )
+
+    result_df["end_index"] = df.loc[end_index, "end_index"].values
+    result_df["linear_velocity"] = df.loc[
+        start_index, "linear_velocity"
+    ].values
+    result_df.loc[np.arange(1, len(result_df), 2), "linear_velocity"] *= -1
+
+    return result_df
+
+
+@lru_cache
+def _get_velocity_df(file: str) -> pd.DataFrame:
+    """
+    Get the manually annotated velocities from params.dataset.LABELS_PATH
+    for a given rosbag `file`, and computes corresponding timestamp.
+
+    Args:
+        file (str): The name of the rosbag file from "Terrain_Samples".
+
+    Returns:
+        pd.DataFrame: A pandas DataFrame containing the velocity
+            manually annotated data for the given rosbag `file` and their
+            start and end timestamps.
+    """
+    velocity_df = pd.read_csv(params.dataset.LABELS_PATH)
+    velocity_df = velocity_df[velocity_df["file"] == file].reset_index()
+    velocity_df = _get_sequence_extremum(velocity_df)
+
+    df_idx = 0
+    bag = rosbag.Bag(PROJECT_PATH / file)
+    for imu_idx, (_, _, t) in enumerate(
+        bag.read_messages(topics=[params.robot.IMU_TOPIC])
+    ):
+        if imu_idx == velocity_df.loc[df_idx, "start_index"]:
+            velocity_df.loc[df_idx, "start_timestamp"] = t
+
+        if imu_idx == velocity_df.loc[df_idx, "end_index"]:
+            velocity_df.loc[df_idx, "end_timestamp"] = t
+            df_idx += 1
+
+        if df_idx >= len(velocity_df):
+            break
+
+    return velocity_df
+
+
+def _get_velocity_from_timestamp(file: str, timestamp: rospy.Time) -> float:
+    """
+    Returns the velocity at a given timestamp from a velocity manually
+    annotated file.
+
+    Args:
+        file (str): The path to the velocity file.
+        timestamp (rospy.Time): The timestamp for which to get the velocity.
+
+    Returns:
+        float: The velocity at the given timestamp.
+
+    Raises:
+        ValueError: If there are multiple velocities for the same timestamp.
+    """
+    velocity_df = _get_velocity_df(file)
+    velocity = velocity_df[
+        (velocity_df["start_timestamp"] <= timestamp)
+        & (timestamp <= velocity_df["end_timestamp"])
+    ]["linear_velocity"]
+
+    if len(velocity) == 0:
+        return 0
+
+    if len(velocity) > 1:
+        raise ValueError("Multiple velocities for the same timestamp")
+
+    return velocity.values[0]
 
 
 def is_inside_image(image: np.ndarray, point: np.ndarray) -> bool:
@@ -299,6 +409,8 @@ class DatasetBuilder:
         self,
         files: list,
         *,
+        filter_static: bool = True,
+        velocity_type: VelocityType = VelocityType.ODOMETRIC,
         filter_cohesion: bool = True,
         filter_coherence: bool = True,
     ) -> None:
@@ -306,6 +418,16 @@ class DatasetBuilder:
 
         Args:
             files (list): List of bag files
+            filter_static (bool, optional): If True, discard images when the
+                robot is static. The definition of "static" depends on
+                velocity_type. Default to True.
+            velocity_type (VelocityType, optional): If
+                VelocityType.ODOMETRIC, the velocity is computed based on
+                odometry. If VelocityType.MANUAL, the velocity is extracted
+                from manual annotated velocities from `labels.csv`. This mode is
+                useful if the velocity data is corrupted, but we do have
+                access to these (manual) annotation. Default to
+                VelocityType.VELOCITY.
             filter_cohesion (bool, optional): If True, discard images that do
                 not share the same sign of velocity. Default to True.
             filter_coherence (bool, optional): If True, discard images with a
@@ -342,10 +464,18 @@ class DatasetBuilder:
                 # Collect images and IMU data only when the robot is moving
                 # (to avoid collecting images of the same place)
                 if (
-                    first_msg_odom.twist.twist.linear.x
+                    filter_static
+                    and velocity_type == VelocityType.ODOMETRIC
+                    and first_msg_odom.twist.twist.linear.x
                     < params.dataset.LINEAR_VELOCITY_THR
                 ):
                     continue
+
+                if velocity_type == VelocityType.MANUAL:
+                    velocity = _get_velocity_from_timestamp(file, t_odom)
+
+                    if filter_static and velocity == 0:
+                        continue
 
                 image = self.bridge.imgmsg_to_cv2(
                     msg_image, desired_encoding="passthrough"
@@ -373,17 +503,11 @@ class DatasetBuilder:
                 point_world_old = None
 
                 x_velocity = []
-
-                # Read the odometry measurement for T second(s)
-                for i, (_, msg_odom, t_odom) in enumerate(
-                    bag.read_messages(
-                        topics=[params.robot.ODOM_TOPIC],
-                        start_time=t_odom,
-                        end_time=t_odom + rospy.Duration(params.dataset.T),
-                    )
+                for _, msg_odom, t_odom in bag.read_messages(
+                    topics=[params.robot.ODOM_TOPIC],
+                    start_time=t_odom,
+                    end_time=t_odom + rospy.Duration(params.dataset.T),
                 ):
-                    # Store the 2D coordinates of the robot position in
-                    # the world frame
                     point_world = np.array(
                         [
                             [
@@ -641,11 +765,10 @@ class DatasetBuilder:
                     )
 
                     # Compute the mean velocity on the current patch
-                    self.velocities[index_image] = np.mean(x_velocity)
+                    if velocity_type == VelocityType.ODOMETRIC:
+                        velocity = np.mean(x_velocity)
 
-                    # FIXME: to keep? (RNN)
-                    # self.features[index_image, 13] = index_trajectory
-                    # self.features[index_image, 14] = t_image.to_sec()
+                    self.velocities[index_image] = velocity
 
                     # Increment the index of the current image
                     index_image += 1
@@ -880,7 +1003,7 @@ class DatasetBuilder:
 # this file is imported in another one
 if __name__ == "__main__":
     dataset = DatasetBuilder(
-        name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion"
+        name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered"
     )
 
     dataset.write_images_and_compute_features(
@@ -913,6 +1036,7 @@ if __name__ == "__main__":
             # "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-14-05-20_0.bag"
             # "bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
         ],
+        velocity_type=VelocityType.MANUAL,
         filter_coherence=False,
         filter_cohesion=False,
     )

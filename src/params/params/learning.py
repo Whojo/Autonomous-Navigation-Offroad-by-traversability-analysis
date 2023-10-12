@@ -16,11 +16,13 @@ VAL_SIZE = 0.15
 TEST_SIZE = 0.15
 
 # Set learning parameters
-LEARNING = {"batch_size": 32,
-            "nb_epochs": 50,
-            "learning_rate": 1e-4,
-            "weight_decay": 0.001,
-            "momentum": 0.9}
+LEARNING = {
+    "batch_size": 32,
+    "nb_epochs": 100,
+    "learning_rate": 1e-4,
+    "weight_decay": 0.001,
+    "momentum": 0.9,
+}
 
 
 ####################################
@@ -29,19 +31,22 @@ LEARNING = {"batch_size": 32,
 
 IMAGE_SHAPE = (
     params.dataset.MIN_WIDTH // params.dataset.RECTANGLE_RATIO,
-    params.dataset.MIN_WIDTH
+    params.dataset.MIN_WIDTH,
 )
 
-JITTER_PARAMS = {"brightness": 0.5,
-                 "contrast": 0.5}
+JITTER_PARAMS = {"brightness": 0.5, "contrast": 0.5}
 
-NORMALIZE_PARAMS = {"rbg": {"mean": torch.tensor([0.4710, 0.5030, 0.4580]),
-                            "std": torch.tensor([0.1965, 0.1859, 0.1955])},
-                    "depth": {"mean": torch.tensor([0.0855]),
-                              "std": torch.tensor([0.0684])},
-                    "normal": {"mean": torch.tensor([0.4981, 0.5832, 0.8387]),
-                               "std": torch.tensor([0.1720, 0.1991, 0.1468])}
-                    }
+NORMALIZE_PARAMS = {
+    "rbg": {
+        "mean": torch.tensor([0.4710, 0.5030, 0.4580]),
+        "std": torch.tensor([0.1965, 0.1859, 0.1955]),
+    },
+    "depth": {"mean": torch.tensor([0.0855]), "std": torch.tensor([0.0684])},
+    "normal": {
+        "mean": torch.tensor([0.4981, 0.5832, 0.8387]),
+        "std": torch.tensor([0.1720, 0.1991, 0.1468]),
+    },
+}
 
 
 ####################
@@ -49,9 +54,7 @@ NORMALIZE_PARAMS = {"rbg": {"mean": torch.tensor([0.4710, 0.5030, 0.4580]),
 ####################
 
 # Set the parameters for the network
-NET_PARAMS = {"nb_input_channels": 7,
-              "nb_input_features": 1,
-              "nb_classes": 10}
+NET_PARAMS = {"nb_input_channels": 7, "nb_input_features": 1, "nb_classes": 10}
 
 
 #######################################
