@@ -5,12 +5,15 @@ import torch
 import torch.nn as nn
 import PIL
 import sys
-from tqdm import tqdm
 
 # Importing custom made parameters
 import utilities.frames as frames
 import params.visualparams as viz
 
+from src.data_preparation.create_dataset import get_patch_dimension
+from src.models_development.multimodal_velocity_regression_alt.model import (
+    ResNet18Velocity_Regression_Alt,
+)
 from params import PROJECT_PATH
 
 
@@ -20,20 +23,15 @@ input_dir = PROJECT_PATH / "bagfiles/images_extracted/"
 IMAGE_W = 1920
 IMAGE_H = 1080
 
-# Costmap parameters
-X = viz.X
-Y = viz.Y
-
 # Initializing some parameters for the model
 transform = viz.TRANSFORM
 transform_depth = viz.TRANSFORM_DEPTH
 transform_normal = viz.TRANSFORM_NORMAL
-device = viz.DEVICE
 
-model = viz.MODEL
-WEIGHTS = "/home/g_thomas/Documents/PRE/src/models_development/multimodal_velocity_regression_alt/logs/_multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence/network.params"
+model = ResNet18Velocity_Regression_Alt()
+WEIGHTS = "/home/g_thomas/Documents/PRE/src/models_development/multimodal_velocity_regression_alt/logs/_multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered/network.params"
 model.load_state_dict(torch.load(WEIGHTS))
-model.eval()
+model.eval().to(viz.DEVICE)
 
 midpoints = viz.MIDPOINTS
 VELOCITY = 1.0
@@ -172,19 +170,14 @@ def get_lists():
                 # Extracting the parameters for the rectangle
                 point_tl = point_tl[0]
                 point_br = point_br[0]
-                crop_width = np.int32(
-                    np.min([IMAGE_W, point_br[0]]) - np.max([0, point_tl[0]])
-                )
-                crop_height = np.int32(crop_width // 3)
 
-                # Extracting the rectangle from the centroid of the projection of the costmap's cell
-                centroid = np.mean(points_image, axis=0)
-                tl_x = np.clip(
-                    centroid[0] - crop_width // 2, 0, IMAGE_W - crop_width
-                )
-                tl_y = np.clip(
-                    centroid[1] - crop_height // 2, 0, IMAGE_H - crop_height
-                )
+                patch = get_patch_dimension(point_tl, point_br)
+                crop_width = patch.max_x - patch.min_x
+                crop_height = patch.max_y - patch.min_y
+
+                tl_x = np.clip(patch.min_x, 0, IMAGE_W - crop_width)
+                tl_y = np.clip(patch.min_y, 0, IMAGE_H - crop_height)
+
                 rect_tl = np.int32([tl_x, tl_y])
                 rect_br = rect_tl + [crop_width, crop_height]
                 # Appending the rectangle to the list

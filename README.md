@@ -38,7 +38,6 @@ This project is about learning to estimate terrain traversability from vision fo
       - `custom_transforms` stores the custom pytorch transforms the user might want to define to build more efficient networks
       - `main.ipynb` is the jupiter notebook setting up all the components together. If you want to launch the whole process, everything will happen here.
     - Some other jupyternotebooks and files stands here as attemps to build some optuna, and other proto-methods.
-  - `models_export` is the concatenation of the model class and transforms functions/class to export in a python package.
   - `params` is a python package containing a set of parameters files. It is designed to allow those variables to be used everywhere in your system and hence unify the configuration of every application of the NN
   - `ros_nodes` contains first draws of ros nodes. Special mention to `husky_speed_depency.py` that makes the robot go back and forth at different speeds to collect data
   - `traversal_cost` contains all the networks used to give the images a cost in the dataset construction. It's structure is very similar to `model_development` so I won't say more than it's there that the SSL-Space-Magic happens.

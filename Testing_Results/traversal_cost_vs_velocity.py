@@ -10,6 +10,9 @@ import pandas as pd
 # Importing custom made parameters
 import params.visualparams as viz
 from params import PROJECT_PATH
+from src.models_development.multimodal_velocity_regression_alt.model import (
+    ResNet18Velocity_Regression_Alt,
+)
 
 # Initializing some parameters for the model
 transform = viz.TRANSFORM
@@ -17,9 +20,12 @@ transform_depth = viz.TRANSFORM_DEPTH
 transform_normal = viz.TRANSFORM_NORMAL
 device = viz.DEVICE
 
-model = viz.MODEL
+model = ResNet18Velocity_Regression_Alt
 _dataset = "multimodal_siamese_png_terrain_samples_filtered_hard"
-WEIGHTS = PROJECT_PATH / f"src/models_development/multimodal_velocity_regression_alt/logs/_{_dataset}/network.params"
+WEIGHTS = (
+    PROJECT_PATH
+    / f"src/models_development/multimodal_velocity_regression_alt/logs/_{_dataset}/network.params"
+)
 model.load_state_dict(torch.load(WEIGHTS))
 model.eval()
 
@@ -34,15 +40,23 @@ dataset_dir = PROJECT_PATH / f"datasets/dataset_{_dataset}"
 index1 = "00022"
 index2 = "00207"
 road = cv2.imread(str(dataset_dir / f"images/{index1}.png"), cv2.IMREAD_COLOR)
-road_depth = cv2.imread(str(dataset_dir / f"images/{index1}d.png"), cv2.IMREAD_GRAYSCALE)
-road_normals = cv2.imread(str(dataset_dir / f"images/{index1}n.png"), cv2.IMREAD_COLOR)
+road_depth = cv2.imread(
+    str(dataset_dir / f"images/{index1}d.png"), cv2.IMREAD_GRAYSCALE
+)
+road_normals = cv2.imread(
+    str(dataset_dir / f"images/{index1}n.png"), cv2.IMREAD_COLOR
+)
 
 grass = cv2.imread(str(dataset_dir / f"images/{index2}.png"), cv2.IMREAD_COLOR)
-grass_depth = cv2.imread(str(dataset_dir / f"images/{index2}d.png"), cv2.IMREAD_GRAYSCALE)
-grass_normals = cv2.imread(str(dataset_dir / f"images/{index2}n.png"), cv2.IMREAD_COLOR)
+grass_depth = cv2.imread(
+    str(dataset_dir / f"images/{index2}d.png"), cv2.IMREAD_GRAYSCALE
+)
+grass_normals = cv2.imread(
+    str(dataset_dir / f"images/{index2}n.png"), cv2.IMREAD_COLOR
+)
 
-road_resized = cv2.resize(road, (210,70))
-grass_resized = cv2.resize(grass, (210,70))
+road_resized = cv2.resize(road, (210, 70))
+grass_resized = cv2.resize(grass, (210, 70))
 
 # Make a PIL image
 road = PIL.Image.fromarray(road)
@@ -60,32 +74,33 @@ grass = viz.TRANSFORM(grass)
 grass_depth = viz.TRANSFORM_DEPTH(grass_depth)
 grass_normals = viz.TRANSFORM_NORMAL(grass_normals)
 
-#Constructing the main image input to the format of the NN
+# Constructing the main image input to the format of the NN
 multimodal_image_road = torch.cat((road, road_depth, road_normals)).float()
 multimodal_image_road = torch.unsqueeze(multimodal_image_road, dim=0)
 multimodal_image_road = multimodal_image_road.to(viz.DEVICE)
 
-#Constructing the main image input to the format of the NN
+# Constructing the main image input to the format of the NN
 multimodal_image_grass = torch.cat((grass, grass_depth, grass_normals)).float()
 multimodal_image_grass = torch.unsqueeze(multimodal_image_grass, dim=0)
 multimodal_image_grass = multimodal_image_grass.to(viz.DEVICE)
 
-with torch.no_grad() :
-    for i in range(velocities.shape[0]) :
-
-        #Computing the fixated velocity
-        #TODO find a way to take a variable input, or an imput of more than one velocity
-        #to compute more costmaps and avoid the velocity dependance
-        velocity = torch.tensor([velocities[i]]).type(torch.float32).to(viz.DEVICE)
+with torch.no_grad():
+    for i in range(velocities.shape[0]):
+        # Computing the fixated velocity
+        # TODO find a way to take a variable input, or an imput of more than one velocity
+        # to compute more costmaps and avoid the velocity dependance
+        velocity = (
+            torch.tensor([velocities[i]]).type(torch.float32).to(viz.DEVICE)
+        )
         velocity.unsqueeze_(1)
 
         output_road = model(multimodal_image_road, velocity)
         output_grass = model(multimodal_image_grass, velocity)
 
-        if viz.REGRESSION == True :
+        if viz.REGRESSION == True:
             cost_road = output_road.cpu()[0]
             cost_grass = output_grass.cpu()[0]
-        else :
+        else:
             # Case Classification
             softmax = nn.Softmax(dim=1)
             output_road = softmax(output_road)
@@ -103,20 +118,16 @@ with torch.no_grad() :
 
 figure = plt.figure()
 
-plt.scatter(velocities,
-            score_road
-            )
+plt.scatter(velocities, score_road)
 
-plt.scatter(velocities,
-            score_grass
-            )
+plt.scatter(velocities, score_grass)
 
 plt.xlabel("Velocity [m/s]")
 plt.ylabel("Traversal cost")
 
 df = pd.read_csv(dataset_dir / "traversal_costs.csv")
 print(len(df))
-df_plot = df.plot(x=['linear_velocity'],y=['traversal_cost'], kind="scatter")
+df_plot = df.plot(x=["linear_velocity"], y=["traversal_cost"], kind="scatter")
 
 plt.show()
 
