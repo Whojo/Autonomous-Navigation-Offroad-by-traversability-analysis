@@ -8,6 +8,7 @@ import numpy as np
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 
+from pathlib import Path
 from custom_transforms import Cutout, Shadowcasting
 import params.learning
 from params.learning import NORMALIZE_PARAMS, LEARNING
@@ -25,9 +26,8 @@ class TraversabilityDataset(Dataset):
         self,
         traversal_costs_file: str,
         images_directory: str,
-        transform_image: callable = None,
-        transform_depth: callable = None,
-        transform_normal: callable = None,
+        image_transform: callable = None,
+        multimodal_transform: callable = None,
     ) -> None:
         """Constructor of the class
 
@@ -35,22 +35,18 @@ class TraversabilityDataset(Dataset):
             traversal_costs_file (string): Path to the csv file which contains
                 images index and their associated traversal cost
             images_directory (string): Directory with all the images
-            transform_image (callable, optional): Transforms to be applied on a
+            image_transform (callable, optional): Transforms to be applied on a
                 rdg image. Defaults to None.
-            transform_depth (callable, optional): Transforms to be applied on a
-                depth image. Defaults to None.
-            transform_normal (callable, optional): Transforms to be applied on
-                a normal image. Defaults to None.
+            multimodal_transform (callable, optional): Transforms to be applied on the
+                multimodal image. Defaults to None.
         """
         self.traversal_costs_frame = pd.read_csv(
             traversal_costs_file, converters={"image_id": str}
         )
 
         self.images_directory = images_directory
-
-        self.transform_image = transform_image
-        self.transform_depth = transform_depth
-        self.transform_normal = transform_normal
+        self.image_transform = image_transform
+        self.multimodal_transform = multimodal_transform
 
     def __len__(self) -> int:
         """Return the size of the dataset
@@ -79,135 +75,185 @@ class TraversabilityDataset(Dataset):
         )
 
         image = Image.open(image_name + ".png")
-        if self.transform_image:
-            image = self.transform_image(image)
+        if self.image_transform:
+            image = self.image_transform(image)
 
         depth_image = Image.open(image_name + "d.png")
-        if self.transform_depth:
-            depth_image = self.transform_depth(depth_image)
-
         normal_map = Image.open(image_name + "n.png")
-        if self.transform_normal:
-            normal_map = self.transform_normal(normal_map)
+
+        image = transforms.ToTensor()(image)
+        depth_image = transforms.ToTensor()(depth_image)
+        normal_map = transforms.ToTensor()(normal_map)
 
         multimodal_image = torch.cat((image, depth_image, normal_map)).float()
+        if self.multimodal_transform:
+            multimodal_image = self.multimodal_transform(multimodal_image)
 
         traversal_cost = self.traversal_costs_frame.loc[
             idx, "traversal_cost"
         ].astype(np.float32)
         linear_velocity = self.traversal_costs_frame.loc[
             idx, "linear_velocity"
-        ]
+        ].astype(np.float32)
 
         return multimodal_image, traversal_cost, linear_velocity
 
 
-train_transform = transforms.Compose(
+DEFAULT_IMAGE_AUGMENTATION_TRANSFORM = transforms.Compose(
     [
-        transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
-        # transforms.RandomHorizontalFlip(p=0.5),
-        # transforms.RandomCrop(100),
         transforms.ColorJitter(**params.learning.JITTER_PARAMS),
         # Black patch
         Cutout(0.5),
         Shadowcasting(0.5),
-        transforms.ToTensor(),
         # Gaussian noise
-        transforms.Lambda(lambda x: x + (0.001**0.5) * torch.randn(x.shape)),
-        transforms.Normalize(
-            mean=NORMALIZE_PARAMS["rbg"]["mean"],
-            std=NORMALIZE_PARAMS["rbg"]["std"],
-        ),
+        # transforms.Lambda(lambda x: x + (0.001**0.5) * torch.randn(x.shape)),
     ]
 )
 
-test_transform = transforms.Compose(
+DEFAULT_AUGMENTATION_TRANSFORM = transforms.Compose(
+    [
+        # transforms.RandomHorizontalFlip(p=0.5),
+        # transforms.RandomCrop(100),
+    ]
+)
+
+DEFAULT_MULTIMODAL_TRANSFORM = transforms.Compose(
     [
         transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
-        transforms.ToTensor(),
         transforms.Normalize(
-            mean=NORMALIZE_PARAMS["rbg"]["mean"],
-            std=NORMALIZE_PARAMS["rbg"]["std"],
-        ),
-    ]
-)
-
-transform_depth = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
-        transforms.Normalize(
-            mean=NORMALIZE_PARAMS["depth"]["mean"],
-            std=NORMALIZE_PARAMS["depth"]["std"],
-        ),
-    ]
-)
-
-transform_normal = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
-        transforms.Normalize(
-            mean=NORMALIZE_PARAMS["normal"]["mean"],
-            std=NORMALIZE_PARAMS["normal"]["std"],
+            mean=NORMALIZE_PARAMS["mean"],
+            std=NORMALIZE_PARAMS["std"],
         ),
     ]
 )
 
 
-train_set = TraversabilityDataset(
-    traversal_costs_file=params.learning.DATASET / "traversal_costs_train.csv",
-    images_directory=params.learning.DATASET / "images_train",
-    transform_image=train_transform,
-    transform_depth=transform_depth,
-    transform_normal=transform_normal,
-)
+def get_sets(
+    dataset: Path,
+    *,
+    image_augmentation_transform: callable,
+    augmentation_transform: callable,
+    multimodal_transform: callable,
+) -> (Dataset, Dataset, Dataset):
+    """
+    Returns trianing set, validation set and test set.
 
-val_set = TraversabilityDataset(
-    traversal_costs_file=params.learning.DATASET / "traversal_costs_train.csv",
-    images_directory=params.learning.DATASET / "images_train",
-    transform_image=test_transform,
-    transform_depth=transform_depth,
-    transform_normal=transform_normal,
-)
+    Args:
+    - dataset (Path): Path to the dataset directory.
+    - image_augmentation_transform (callable): Transform to apply to the image
+        and only for the training set.
+    - augmentation_transform (callable): Transform to apply to the multimodal
+        image and only for the training set.
+    - multimodal_transform (callable): Transform to apply to the multimodal
+        image on all sets.
 
-test_set = TraversabilityDataset(
-    traversal_costs_file=params.learning.DATASET / "traversal_costs_test.csv",
-    images_directory=params.learning.DATASET / "images_test",
-    transform_image=test_transform,
-    transform_depth=transform_depth,
-    transform_normal=transform_normal,
-)
+    Returns:
+    - Tuple[Dataset, Dataset, Dataset]: A tuple containing the three datasets,
+        in the following order: training set, validation set, test set.
+    """
+    train_set = TraversabilityDataset(
+        traversal_costs_file=dataset / "traversal_costs_train.csv",
+        images_directory=dataset / "images_train",
+        image_transform=image_augmentation_transform,
+        multimodal_transform=transforms.Compose(
+            [augmentation_transform, multimodal_transform]
+        ),
+    )
 
-train_size = params.learning.TRAIN_SIZE / (1 - params.learning.TEST_SIZE)
-train_indices, val_indices = train_test_split(
-    range(len(train_set)), train_size=train_size
-)
+    val_set = TraversabilityDataset(
+        traversal_costs_file=dataset / "traversal_costs_train.csv",
+        images_directory=dataset / "images_train",
+        image_transform=None,
+        multimodal_transform=multimodal_transform,
+    )
 
-train_set = Subset(train_set, train_indices)
-val_set = Subset(val_set, val_indices)
+    test_set = TraversabilityDataset(
+        traversal_costs_file=dataset / "traversal_costs_test.csv",
+        images_directory=dataset / "images_test",
+        image_transform=None,
+        multimodal_transform=multimodal_transform,
+    )
+
+    return train_set, val_set, test_set
 
 
-def get_loader(set: Dataset, *, shuffle: bool = True) -> DataLoader:
+def _set_to_loader(
+    set: Dataset,
+    *,
+    shuffle: bool = True,
+    batch_size: int = LEARNING["batch_size"],
+) -> DataLoader:
     """Return a DataLoader for a given dataset
 
     Args:
         set (Dataset): Dataset to load
         shuffle (bool, optional): Whether to shuffle the data. Defaults to
             True.
+        batch_size (int, optional): Size of the batch. Defaults to
+            LEARNING["batch_size"].
 
     Returns:
         DataLoader: DataLoader for the given dataset
     """
     return DataLoader(
         set,
-        batch_size=LEARNING["batch_size"],
+        batch_size=batch_size,
         shuffle=shuffle,
         num_workers=12,  # Asynchronous data loading and augmentation
         pin_memory=True,  # Increase the transferring speed of the data to the GPU
     )
 
 
-train_loader = get_loader(train_set)
-val_loader = get_loader(val_set)
-test_loader = get_loader(test_set, shuffle=False)
+def get_dataloader(
+    dataset: Path,
+    *,
+    image_augmentation_transform: callable = DEFAULT_IMAGE_AUGMENTATION_TRANSFORM,
+    augmentation_transform: callable = DEFAULT_AUGMENTATION_TRANSFORM,
+    multimodal_transform: callable = DEFAULT_MULTIMODAL_TRANSFORM,
+    batch_size: int = LEARNING["batch_size"],
+) -> (DataLoader, DataLoader, DataLoader):
+    """
+    Returns train, validation and test dataloaders for the given dataset.
+
+    Args:
+    - dataset (Path): Path to the dataset.
+    - image_augmentation_transform (callable): Transform to apply to the image
+        and only for the training set. Defaults to
+        DEFAULT_IMAGE_AUGMENTATION_TRANSFORM.
+    - augmentation_transform (callable): Transform to apply to the multimodal
+        image and only for the training set. Defaults to
+        DEFAULT_AUGMENTATION_TRANSFORM.
+    - multimodal_transform (callable): Transform to apply to the multimodal
+        image on all sets. Defaults to DEFAULT_MULTIMODAL_TRANSFORM.
+    - batch_size (int): Size of the batch. Defaults to
+        LEARNING["batch_size"].
+
+    Returns:
+    - Tuple[DataLoader, DataLoader, DataLoader]: A tuple containing train,
+          validation and test dataloaders.
+    """
+    train_set, val_set, test_set = get_sets(
+        dataset,
+        image_augmentation_transform=image_augmentation_transform,
+        augmentation_transform=augmentation_transform,
+        multimodal_transform=multimodal_transform,
+    )
+
+    train_size = params.learning.TRAIN_SIZE / (1 - params.learning.TEST_SIZE)
+    train_indices, val_indices = train_test_split(
+        range(len(train_set)), train_size=train_size
+    )
+
+    train_set = Subset(train_set, train_indices)
+    val_set = Subset(val_set, val_indices)
+
+    train_loader = _set_to_loader(train_set, batch_size=batch_size)
+    val_loader = _set_to_loader(val_set, batch_size=batch_size)
+    test_loader = _set_to_loader(
+        test_set, shuffle=False, batch_size=batch_size
+    )
+
+    return train_loader, val_loader, test_loader
+
+
+train_loader, val_loader, test_loader = get_dataloader(params.learning.DATASET)
