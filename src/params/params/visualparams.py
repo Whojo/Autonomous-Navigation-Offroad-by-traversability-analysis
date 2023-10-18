@@ -59,9 +59,6 @@ WEIGHTS = (
 CROP_WIDTH = 210
 CROP_HEIGHT = 70
 NORMALIZE_PARAMS = learning.NORMALIZE_PARAMS
-TRANSFORM = ResNet18Velocity.test_transform
-TRANSFORM_DEPTH = ResNet18Velocity.transform_depth
-TRANSFORM_NORMAL = ResNet18Velocity.transform_normal
 
 DATASET = (
     PROJECT_PATH / "datasets/dataset_multimodal_siamese_png_filtered_hard"

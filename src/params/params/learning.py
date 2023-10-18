@@ -8,7 +8,8 @@ from params import PROJECT_PATH
 #########################
 
 # Define the data to be used
-DATASET = PROJECT_PATH / "datasets/dataset_multimodal_siamese_png_filtered_hard/"
+_dataset = "multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered"
+DATASET = PROJECT_PATH / f"datasets/dataset_{_dataset}"
 
 # Define splits size
 TRAIN_SIZE = 0.7
@@ -17,11 +18,9 @@ TEST_SIZE = 0.15
 
 # Set learning parameters
 LEARNING = {
-    "batch_size": 32,
-    "nb_epochs": 100,
-    "learning_rate": 1e-4,
-    "weight_decay": 0.001,
-    "momentum": 0.9,
+    "batch_size": 64,
+    "nb_epochs": 200,
+    "learning_rate": 0.0009,
 }
 
 
@@ -34,18 +33,20 @@ IMAGE_SHAPE = (
     params.dataset.MIN_WIDTH,
 )
 
-JITTER_PARAMS = {"brightness": 0.5, "contrast": 0.5}
+JITTER_PARAMS = {
+    "brightness": 0.9,
+    "contrast": 0.3,
+    "saturation": 1,
+    "hue": 0.1,
+}
 
 NORMALIZE_PARAMS = {
-    "rbg": {
-        "mean": torch.tensor([0.4710, 0.5030, 0.4580]),
-        "std": torch.tensor([0.1965, 0.1859, 0.1955]),
-    },
-    "depth": {"mean": torch.tensor([0.0855]), "std": torch.tensor([0.0684])},
-    "normal": {
-        "mean": torch.tensor([0.4981, 0.5832, 0.8387]),
-        "std": torch.tensor([0.1720, 0.1991, 0.1468]),
-    },
+    "mean": torch.tensor(
+        [0.4710, 0.5030, 0.4580, 0.0855, 0.4981, 0.5832, 0.8387]
+    ),
+    "std": torch.tensor(
+        [0.1965, 0.1859, 0.1955, 0.0684, 0.1720, 0.1991, 0.1468]
+    ),
 }
 
 

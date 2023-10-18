@@ -1,10 +1,9 @@
 import torch
-import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 # Import custom modules and packages
 import params.learning
-from dataset import TraversabilityDataset
+from dataset import TraversabilityDataset, DEFAULT_MULTIMODAL_TRANSFORM
 
 
 def compute_mean_std(
@@ -20,24 +19,10 @@ def compute_mean_std(
     Returns:
         tuple: Mean and standard deviation of the dataset
     """
-    transform = transforms.Compose(
-        [
-            # Convert a PIL Image or numpy.ndarray to tensor
-            transforms.ToTensor(),
-            # Reduce the size of the images
-            # (if size is an int, the smaller edge of the
-            # image will be matched to this number and the ration is kept)
-            transforms.Resize(params.learning.IMAGE_SHAPE),
-        ]
-    )
-
-    # Create a Dataset for training
     dataset = TraversabilityDataset(
         traversal_costs_file=params.learning.DATASET / traversal_costs_file,
         images_directory=params.learning.DATASET / images_directory,
-        transform_image=transform,
-        transform_depth=transform,
-        transform_normal=transform,
+        multimodal_transform=DEFAULT_MULTIMODAL_TRANSFORM,
     )
 
     loader = DataLoader(
