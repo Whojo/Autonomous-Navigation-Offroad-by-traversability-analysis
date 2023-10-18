@@ -32,13 +32,13 @@ def test(
         model (nn.Module): The model to test
         device (str): The device to use for the computations
         test_loader (torch.utils.data.DataLoader): The dataloader for the
-        test set
+            test set
         criterion_classification (nn.Module): The loss function for the
-        classification task
+            classification task
         criterion_regression (nn.Module): The loss function for the
-        regression task
+            regression task
         bins_midpoints (np.ndarray): The midpoints of the bins used for the
-        discretization of the traversal cost
+            discretization of the traversal cost
 
     Returns:
         double, double, double, list, list: The average loss, the accuracy,
@@ -99,18 +99,18 @@ def test_models(
         models (list): List of models to test
         device (string): The device to use for the computations
         test_loader (torch.utils.data.DataLoader): The dataloader for the test
-        set
+            set
         criterion_classification (nn.Module): The loss function for the
-        classification task
+            classification task
         criterion_regression (nn.Module): The loss function for the regression
-        task
+            task
         bins_midpoints (np.ndarray): The midpoints of the bins used for the
-        discretization of the traversal cost
+            discretization of the traversal cost
 
     Returns:
         double, double, double, list, list: The average loss, the accuracy, the
-        regression loss, the list of the uncertainties, the list of regression
-        losses
+            regression loss, the list of the uncertainties, the list of regression
+            losses
     """
     # Testing
     test_regression_loss = 0.0
