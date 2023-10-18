@@ -41,12 +41,37 @@ class TraversabilityDataset(Dataset):
                 multimodal image. Defaults to None.
         """
         self.traversal_costs_frame = pd.read_csv(
-            traversal_costs_file, converters={"image_id": str}
+            traversal_costs_file,
+            converters={"image_id": str},
+            dtype={
+                "traversal_cost": np.float32,
+                "linear_velocity": np.float32,
+            },
         )
 
         self.images_directory = images_directory
         self.image_transform = image_transform
         self.multimodal_transform = multimodal_transform
+
+        self.images = self._get_image_list_with_suffix(".png")
+        self.depths = self._get_image_list_with_suffix("d.png")
+        self.normals = self._get_image_list_with_suffix("n.png")
+
+    def _get_image_list_with_suffix(self, suffix: str) -> list:
+        return [
+            self._get_image_with_suffix(suffix, idx)
+            for idx in range(len(self))
+        ]
+
+    def _get_image_with_suffix(self, suffix: str, idx: int) -> torch.Tensor:
+        image_name = os.path.join(
+            self.images_directory,
+            self.traversal_costs_frame.loc[idx, "image_id"],
+        )
+
+        img = Image.open(image_name + suffix)
+        img.load()
+        return img
 
     def __len__(self) -> int:
         """Return the size of the dataset
@@ -69,17 +94,12 @@ class TraversabilityDataset(Dataset):
               traversability_label,
               linear_velocity])
         """
-        image_name = os.path.join(
-            self.images_directory,
-            self.traversal_costs_frame.loc[idx, "image_id"],
-        )
-
-        image = Image.open(image_name + ".png")
+        image = self.images[idx]
         if self.image_transform:
             image = self.image_transform(image)
 
-        depth_image = Image.open(image_name + "d.png")
-        normal_map = Image.open(image_name + "n.png")
+        depth_image = self.depths[idx]
+        normal_map = self.normals[idx]
 
         image = transforms.ToTensor()(image)
         depth_image = transforms.ToTensor()(depth_image)
@@ -89,12 +109,10 @@ class TraversabilityDataset(Dataset):
         if self.multimodal_transform:
             multimodal_image = self.multimodal_transform(multimodal_image)
 
-        traversal_cost = self.traversal_costs_frame.loc[
-            idx, "traversal_cost"
-        ].astype(np.float32)
+        traversal_cost = self.traversal_costs_frame.loc[idx, "traversal_cost"]
         linear_velocity = self.traversal_costs_frame.loc[
             idx, "linear_velocity"
-        ].astype(np.float32)
+        ]
 
         return multimodal_image, traversal_cost, linear_velocity
 
@@ -254,6 +272,3 @@ def get_dataloader(
     )
 
     return train_loader, val_loader, test_loader
-
-
-train_loader, val_loader, test_loader = get_dataloader(params.learning.DATASET)
