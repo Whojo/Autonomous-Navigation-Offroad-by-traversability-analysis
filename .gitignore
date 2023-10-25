@@ -1,6 +1,9 @@
 # Directories to be ignored
 __pycache__/
-datasets/*
+.ipynb_checkpoints/
+*.egg-info/
+build/
+datasets/
 results/
 pytorch/
 runs/
@@ -8,38 +11,17 @@ bagfiles/raw_bagfiles
 bagfiles/images_extracted
 dist/
 src/traversal_cost/datasets
-
-# Files used to train myself on classification with the ImageNet dataset
-coffee.jpg
-imagenet_class_labels.txt
-
-Notes.md
-*.png
-*.tiff
-
-# Saved model parameters
-*.params
-
-/dwa.py
-# /trajectory_traversal_cost.py
-/optuna_test.py
-/normals.py
-/resnet_jetson.py
-
-# /*.npy
-
-/src/models_development/images_test.py
-
+logs/
 logs_optuna*/
-
 data_Arnaud/
 
-_*
+# VSCode specific
+.vscode/
+launch.json
 
-pack
-
-.ipynb_checkpoints/
-
-*.egg-info/
-
-build/
+# Images and checkpoints should not be pushed
+*.png
+*.tiff
+*.pth
+*.params
+*.npy
