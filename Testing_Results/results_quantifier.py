@@ -84,7 +84,7 @@ def get_lists():
         grid_list : a list of X*Y coordinates to indicate the visual projection of the costmap on the display
     """
 
-    rectangle_list = np.zeros((viz.Y, viz.X, 2, 2), np.int32)
+    rectangle_list = np.full((viz.Y, viz.X), None)
     grid_list = np.zeros((viz.Y, viz.X, 4, 2), np.int32)
 
     if viz.X % 2 == 1:
@@ -139,7 +139,7 @@ def get_lists():
             # If the area in squared pixels of the costmap cell is big enough, then relevant data can be extracted
             #
             # IMPORTANT : If there's nothing to extract because the rectangle is too small on the image,
-            # KEEP THE COORDINATES TO ZERO, this is the way we're going to check later for the pertinence of the coordinates.
+            # KEEP THE COORDINATES TO None, this is the way we're going to check later for the pertinence of the coordinates.
             if (
                 intern_area / area >= viz.THRESHOLD_INTERSECT
                 and area >= viz.THRESHOLD_AREA
@@ -170,16 +170,15 @@ def get_lists():
                 all_points = np.vstack((point_br, point_tl))
                 patch = get_patch_dimension(all_points)
 
-                crop_width = patch.max_x - patch.min_x
-                crop_height = patch.max_y - patch.min_y
+                if (
+                    patch.min_x < 0
+                    or patch.min_y < 0
+                    or patch.max_x > IMAGE_W
+                    or patch.max_y > IMAGE_H
+                ):
+                    continue
 
-                tl_x = np.clip(patch.min_x, 0, IMAGE_W - crop_width)
-                tl_y = np.clip(patch.min_y, 0, IMAGE_H - crop_height)
-
-                rect_tl = np.int32([tl_x, tl_y])
-                rect_br = rect_tl + [crop_width, crop_height]
-
-                rectangle_list[y, x] = np.array([rect_tl, rect_br])
+                rectangle_list[y, x] = patch
 
     return rectangle_list, grid_list
 
@@ -225,15 +224,15 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
     with torch.no_grad():
         for x in range(viz.X):
             for y in range(viz.Y):
-                rectangle = rectangle_list[y, x]
-                if np.all(rectangle == 0):
+                patch = rectangle_list[y, x]
+                if patch is None:
                     continue
 
                 crop_patch = (
-                    rectangle[0, 0],
-                    rectangle[0, 1],
-                    rectangle[1, 0],
-                    rectangle[1, 1],
+                    patch.min_x,
+                    patch.min_y,
+                    patch.max_x,
+                    patch.max_y,
                 )
                 crop = img.crop(crop_patch)
                 depth_crop = img_depth.crop(crop_patch)
@@ -250,9 +249,9 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
                 else:
                     softmax = nn.Softmax(dim=1)
                     output = softmax(output)
-                    output = output.cpu()[0]
+                    output = output.cpu().item()
                     probs = output.numpy()
-                    cost = np.dot(probs, np.transpose(midpoints)).item()
+                    cost = np.dot(probs, np.transpose(midpoints))
 
                 costmap[y, x] = cost
 
@@ -305,36 +304,37 @@ def display(
     # For each costmap element
     for x in range(viz.X):
         for y in range(viz.Y):
-            # Getting the rectangle coordinate
-            rectangle = rectangle_list[y, x]
-            # Checking if we estimated beforehand that the rectangle might have something interesting to display
-            if not np.array_equal(rectangle, np.zeros(rectangle.shape)):
-                # If there's something we get the coordinates of the cell and the rectangle
-                rect_tl, rect_br = rectangle[0], rectangle[1]
-                points_image = grid_list[y, x]
+            patch = rectangle_list[y, x]
+            if patch is None:
+                continue
 
-                # Display the center of the cell
-                centroid = np.mean(points_image, axis=0)
-                cv2.circle(
-                    imgviz,
-                    tuple(np.int32(centroid)),
-                    radius=4,
-                    color=(255, 0, 0),
-                    thickness=-1,
-                )
+            # Display the center of the cell
+            points_image = grid_list[y, x]
+            centroid = np.mean(points_image, axis=0)
+            cv2.circle(
+                imgviz,
+                tuple(np.int32(centroid)),
+                radius=4,
+                color=(255, 0, 0),
+                thickness=-1,
+            )
 
-                # Displaying the rectangle
-                rect_tl = tuple(rect_tl)
-                rect_br = tuple(rect_br)
-                cv2.rectangle(imgviz, rect_tl, rect_br, (255, 0, 0), 1)
-                # Display the frontiers of the cell
-                points_image_reshape = points_image.reshape((-1, 1, 2))
-                cv2.polylines(
-                    imgviz,
-                    np.int32([points_image_reshape]),
-                    True,
-                    (0, 255, 255),
-                )
+            # Displaying the rectangle
+            cv2.rectangle(
+                imgviz,
+                (patch.min_x, patch.min_y),
+                (patch.max_x, patch.max_y),
+                (255, 0, 0),
+                1,
+            )
+            # Display the frontiers of the cell
+            points_image_reshape = points_image.reshape((-1, 1, 2))
+            cv2.polylines(
+                imgviz,
+                np.int32([points_image_reshape]),
+                True,
+                (0, 255, 255),
+            )
 
     # Building cell per cell and array that will become our costmap visualization
     for x in range(viz.X):
