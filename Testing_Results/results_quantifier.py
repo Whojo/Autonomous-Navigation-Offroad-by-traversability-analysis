@@ -3,40 +3,36 @@ import numpy as np
 import cv2
 import torch
 import torch.nn as nn
-import PIL
-import sys
+import torchvision.transforms as transforms
+from PIL import Image
 
 # Importing custom made parameters
 import utilities.frames as frames
 import params.visualparams as viz
 
 from src.data_preparation.create_dataset import get_patch_dimension
+from src.models_development.multimodal_velocity_regression_alt.dataset import (
+    DEFAULT_MULTIMODAL_TRANSFORM,
+)
 from src.models_development.multimodal_velocity_regression_alt.model import (
     ResNet18Velocity_Regression_Alt,
 )
 from params import PROJECT_PATH
 
 
-results_dir = PROJECT_PATH / "Testing_Results/"
-input_dir = PROJECT_PATH / "bagfiles/images_extracted/"
-
 IMAGE_W = 1920
 IMAGE_H = 1080
 
-# Initializing some parameters for the model
-transform = viz.TRANSFORM
-transform_depth = viz.TRANSFORM_DEPTH
-transform_normal = viz.TRANSFORM_NORMAL
-
 model = ResNet18Velocity_Regression_Alt()
-WEIGHTS = "/home/g_thomas/Documents/PRE/src/models_development/multimodal_velocity_regression_alt/logs/_multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered/network.params"
+WEIGHTS = (
+    PROJECT_PATH
+    / "src/models_development/multimodal_velocity_regression_alt/logs/_post_hp_tuning/network.params"
+)
 model.load_state_dict(torch.load(WEIGHTS))
 model.eval().to(viz.DEVICE)
 
 midpoints = viz.MIDPOINTS
 VELOCITY = 1.0
-
-print(viz.WEIGHTS)
 
 
 def get_corners(x, y):
@@ -187,6 +183,27 @@ def get_lists():
     return rectangle_list, grid_list
 
 
+def get_model_input(
+    crop: np.array,
+    depth_crop: np.array,
+    normals_crop: np.array,
+    velocity: float,
+):
+    crop = transforms.ToTensor()(crop)
+    depth_crop = transforms.ToTensor()(depth_crop)
+    normals_crop = transforms.ToTensor()(normals_crop)
+
+    multimodal_image = torch.cat((crop, depth_crop, normals_crop)).float()
+    multimodal_image = DEFAULT_MULTIMODAL_TRANSFORM(multimodal_image)
+    multimodal_image = torch.unsqueeze(multimodal_image, 0)
+    multimodal_image = multimodal_image.to(viz.DEVICE)
+
+    velocity = torch.tensor([VELOCITY]).type(torch.float32).to(viz.DEVICE)
+    velocity.unsqueeze_(1)
+
+    return multimodal_image, velocity
+
+
 def predict_costs(img, img_depth, img_normals, rectangle_list, model):
     """
     The main function of this programs, take a list of coordinates and the input image
@@ -201,12 +218,9 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
 
     Returns:
         Costmap : A numpy array of X*Y dimension with the costs
-        max_cost, min_cost : the max and min cost of the costmap, useful for visualization later ;)
     """
     # Intializing buffers
     costmap = np.zeros((viz.Y, viz.X))
-    min_cost = sys.float_info.max
-    max_cost = sys.float_info.min
 
     # Turn off gradients computation
     with torch.no_grad():
@@ -215,72 +229,54 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
             for y in range(viz.Y):
                 # Getting the rectangle coordinates
                 rectangle = rectangle_list[y, x]
-                # Cropping the images to get the inputs we want for this perticular cell
-                crop = img[
-                    rectangle[0, 1] : rectangle[1, 1],
-                    rectangle[0, 0] : rectangle[1, 0],
-                ]
-                depth_crop = img_depth[
-                    rectangle[0, 1] : rectangle[1, 1],
-                    rectangle[0, 0] : rectangle[1, 0],
-                ]
-                normals_crop = img_normals[
-                    rectangle[0, 1] : rectangle[1, 1],
-                    rectangle[0, 0] : rectangle[1, 0],
-                ]
 
                 # If the rectangle is not empty (Check if we considered beforehand that it was useful to crop there)
-                if not np.array_equal(rectangle, np.zeros(rectangle.shape)):
-                    # Converting the BGR image to RGB
-                    crop = cv2.cvtColor(np.uint8(crop), cv2.COLOR_BGR2RGB)
-
-                    # Make a PIL image
-                    crop = PIL.Image.fromarray(crop)
-                    depth_crop = PIL.Image.fromarray(depth_crop)
-                    normals_crop = PIL.Image.fromarray(normals_crop)
-
-                    # Apply transforms to the image
-                    crop = viz.TRANSFORM(crop)
-                    depth_crop = viz.TRANSFORM_DEPTH(depth_crop)
-                    normals_crop = viz.TRANSFORM_NORMAL(normals_crop)
-
-                    # Constructing the main image input to the format of the NN
-                    multimodal_image = torch.cat(
-                        (crop, depth_crop, normals_crop)
-                    ).float()
-                    multimodal_image = torch.unsqueeze(multimodal_image, dim=0)
-                    multimodal_image = multimodal_image.to(viz.DEVICE)
-                    # Computing the fixated velocity
-                    # TODO find a way to take a variable input, or an imput of more than one velocity
-                    # to compute more costmaps and avoid the velocity dependance
-                    velocity = (
-                        torch.tensor([VELOCITY])
-                        .type(torch.float32)
-                        .to(viz.DEVICE)
+                if np.any(rectangle != 0):
+                    crop_patch = (
+                        rectangle[0, 0],
+                        rectangle[0, 1],
+                        rectangle[1, 0],
+                        rectangle[1, 1],
                     )
-                    velocity.unsqueeze_(1)
+                    crop = img.crop(crop_patch)
+                    depth_crop = img_depth.crop(crop_patch)
+                    normals_crop = img_normals.crop(crop_patch)
 
-                    # Computing the cost from the classification problem with the help of midpoints
-                    output = model(multimodal_image, velocity)
+                    input = get_model_input(
+                        crop, depth_crop, normals_crop, VELOCITY
+                    )
+
+                    output = model(*input)
 
                     if viz.REGRESSION == True:
                         # Case Regression
-                        cost = output.cpu()[0]
+                        cost = output.cpu().item()
                     else:
                         # Case Classification
                         softmax = nn.Softmax(dim=1)
                         output = softmax(output)
                         output = output.cpu()[0]
                         probs = output.numpy()
-                        cost = np.dot(probs, np.transpose(midpoints))
+                        cost = np.dot(probs, np.transpose(midpoints)).item()
 
                     # Filling the output array (the numeric costmap)
-                    costmap[y, x] = cost.item()
-                    if cost < min_cost:
-                        min_cost = cost
-                    elif cost > max_cost:
-                        max_cost = cost
-    return (costmap, min_cost, max_cost)
+                    costmap[y, x] = cost
+
+    return costmap
+
+
+def cost_to_color(value, min, max):
+    """
+    A function that normalize a cost between 0 and 255
+    Args :
+        value : the value to normalize
+        min : the minimum value of the range
+        max : the maximum value of the range
+
+    Returns :
+        The normalized value
+    """
+    return (value - min) / (max - min) * 255
 
 
 def display(
@@ -310,7 +306,7 @@ def display(
     costmapviz_hand = np.zeros((viz.Y, viz.X, 3), np.uint8)
     costmapviz_diff = np.zeros((viz.Y, viz.X, 3), np.uint8)
 
-    costmap_diff = costmap - costmap_by_hand
+    costmap_diff = np.abs(costmap - costmap_by_hand)
 
     # For each costmap element
     for x in range(viz.X):
@@ -349,41 +345,22 @@ def display(
     # Building cell per cell and array that will become our costmap visualization
     for x in range(viz.X):
         for y in range(viz.Y):
-            # If the cell is not empty because some cost has been generated
+            costmapviz[y, x] = (0, 0, 0)
             if costmap[y, x] != 0:
-                # Normalizing the content
-                value = np.uint8(
-                    ((costmap[y, x] - min_cost) / (max_cost - min_cost)) * 255
-                )
+                value = cost_to_color(costmap[y, x], min_cost, max_cost)
                 costmapviz[y, x] = (value, value, value)
-            else:
-                # If nothing we leave the image black
-                costmapviz[y, x] = (0, 0, 0)
 
+            costmapviz_hand[y, x] = (0, 0, 0)
             if costmap_by_hand[y, x] != 0:
-                # Normalizing the content
-                value = np.uint8(
-                    (
-                        (costmap_by_hand[y, x] - min_cost)
-                        / (max_cost - min_cost)
-                    )
-                    * 255
+                value = cost_to_color(
+                    costmap_by_hand[y, x], min_cost, max_cost
                 )
                 costmapviz_hand[y, x] = (value, value, value)
-            else:
-                # If nothing we leave the image black
-                costmapviz_hand[y, x] = (0, 0, 0)
 
+            costmapviz_diff[y, x] = (0, 0, 0)
             if costmap_diff[y, x] != 0:
-                # Normalizing the content
-                value = np.uint8(
-                    ((costmap_diff[y, x] / (np.max([np.abs(costmap_diff)]))))
-                    * 255
-                )
+                value = cost_to_color(costmap_diff[y, x], min_cost, max_cost)
                 costmapviz_diff[y, x] = (value, value, value)
-            else:
-                # If nothing we leave the image black
-                costmapviz_diff[y, x] = (0, 0, 0)
 
     # Applying the color gradient
     costmapviz = cv2.applyColorMap(src=costmapviz, colormap=cv2.COLORMAP_JET)
@@ -418,41 +395,43 @@ def display(
     cv2.waitKey(0)
 
 
-# directory = PROJECT_PATH / "bagfiles/images_extracted/from_terrain_samples"
-directory = PROJECT_PATH / "bagfiles/images_extracted"
+if __name__ == "__main__":
+    directory = PROJECT_PATH / "bagfiles/images_extracted/from_terrain_samples"
+    # directory = PROJECT_PATH / "bagfiles/images_extracted"
 
-# Matches any file that ends with a number and .png
-# (i.e. only rgb images, not depth or normals)
-files = list(directory.glob("[!dn].png"))
-# files = list(directory.glob("*[!_d_n].png"))
+    # Matches any file that ends with a number and .png
+    # (i.e. only rgb images, not depth or normals)
+    files = list(directory.glob("*[!dn].png"))
 
-rectangle_list, grid_list = get_lists()
+    rectangle_list, grid_list = get_lists()
 
-# writer = cv2.VideoWriter(str(PROJECT_PATH / "Testing_Results/output.avi"), cv2.VideoWriter_fourcc(*'XVID'), 0.5, (1792,1008))
-for file in files:
-    depth_name = directory / (file.stem + "d.png")
-    normal_name = directory / (file.stem + "n.png")
+    # writer = cv2.VideoWriter(str(PROJECT_PATH / "Testing_Results/output.avi"), cv2.VideoWriter_fourcc(*'XVID'), 0.5, (1792,1008))
+    for file in files:
+        depth_name = directory / (file.stem + "_d.png")
+        normal_name = directory / (file.stem + "_n.png")
 
-    img = cv2.imread(str(file))
-    img_depth = cv2.imread(str(depth_name), cv2.IMREAD_GRAYSCALE)
-    img_normal = cv2.imread(str(normal_name))
-    costmap_by_hand = np.load(input_dir / f"costmaps{int(file.stem)}.npy")
+        img = Image.open(str(file))
+        img_depth = Image.open(str(depth_name))
+        img_normal = Image.open(str(normal_name))
+        # costmap_by_hand = np.load(directory / f"costmaps{int(file.stem)}.npy")
 
-    costmap, min_cost, max_cost = predict_costs(
-        img, img_depth, img_normal, rectangle_list, model
-    )
-    print(np.mean(costmap[np.where(costmap != 0)]))
-    max_cost = np.max([max_cost, np.max(costmap_by_hand)])
-    min_cost = np.min([min_cost, np.min(costmap_by_hand)])
+        costmap = predict_costs(
+            img, img_depth, img_normal, rectangle_list, model
+        )
+        costmap_by_hand = np.zeros_like(costmap)
 
-    display(
-        img,
-        costmap,
-        costmap_by_hand,
-        rectangle_list,
-        grid_list,
-        max_cost,
-        min_cost,
-    )
+        max_cost = np.max([costmap, costmap_by_hand])
+        min_cost = np.min([costmap, costmap_by_hand])
 
-# writer.release()
+        img = cv2.imread(str(file))
+        display(
+            img,
+            costmap,
+            costmap_by_hand,
+            rectangle_list,
+            grid_list,
+            max_cost,
+            min_cost,
+        )
+
+    # writer.release()
