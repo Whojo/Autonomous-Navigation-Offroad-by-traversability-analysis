@@ -273,22 +273,16 @@ def is_inside_image(image: np.ndarray, point: np.ndarray) -> bool:
     )
 
 
-def _get_outter_rectangle(
-    points_image_old: np.array, points_image: np.array
-) -> RectangleDim:
+def _get_outter_rectangle(all_points: np.array) -> RectangleDim:
     """
-    Given two arrays of points, returns the minimum bounding rectangle that contains all the points.
+    Given an array of points, returns the minimum bounding rectangle that contains all the points.
 
     Args:
-    - points_image_old: np.array, shape (n, 2), containing the coordinates of the points in the old image.
-    - points_image: np.array, shape (n, 2), containing the coordinates of the points in the new image.
+    - all_points: np.array, shape (n, 2), containing the coordinates of the points in the image.
 
     Returns:
     - RectangleDim: a named tuple containing the dimensions of the minimum bounding rectangle.
     """
-
-    all_points = np.vstack((points_image_old, points_image))
-
     max_y = np.max(all_points[:, 1])
     min_y = np.min(all_points[:, 1])
     min_x = np.min([all_points[:, 0]])
@@ -325,9 +319,7 @@ def _to_valid_patch_dimension(rec: RectangleDim) -> RectangleDim:
     return RectangleDim(min_x, max_x, min_y, max_y)
 
 
-def get_patch_dimension(
-    points_image_old: np.array, points_image: np.array
-) -> RectangleDim:
+def get_patch_dimension(all_points: np.array) -> RectangleDim:
     """
     Return a new minimal rectangle patch that
     1. includes all the points
@@ -336,13 +328,12 @@ def get_patch_dimension(
     is the same as the inputted one
 
     Args:
-        points_image_old: np.array of shape (N, 2) of points in the old image
-        points_image: np.array of shape (N, 2) of points in the new image
+        all_points: np.array of shape (N, 2) of points in the image
 
     Returns:
         RectangleDim: namedtuple of (min_x, max_x, min_y, max_y) of the new rectangle
     """
-    rec = _get_outter_rectangle(points_image_old, points_image)
+    rec = _get_outter_rectangle(all_points)
     return _to_valid_patch_dimension(rec)
 
 
@@ -636,7 +627,8 @@ class DatasetBuilder:
                     if patch_angle > params.dataset.PATCH_ANGLE_THR:
                         break
 
-                    patch = get_patch_dimension(points_image_old, points_image)
+                    all_points = np.vstack((points_image_old, points_image))
+                    patch = get_patch_dimension(all_points)
 
                     if not is_inside_image(
                         image, (patch.max_x, patch.max_y)

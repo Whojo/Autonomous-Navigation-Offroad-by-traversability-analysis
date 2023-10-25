@@ -171,7 +171,8 @@ def get_lists():
                 point_tl = point_tl[0]
                 point_br = point_br[0]
 
-                patch = get_patch_dimension(point_tl, point_br)
+                all_points = np.vstack((point_br, point_tl))
+                patch = get_patch_dimension(all_points)
                 crop_width = patch.max_x - patch.min_x
                 crop_height = patch.max_y - patch.min_y
 
