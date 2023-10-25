@@ -28,7 +28,7 @@ Y = 20
 RESOLUTION = 0.20
 
 # Parameters relative to the rosbag input
-IMAGE_H, IMAGE_W = 720, 1080
+IMAGE_H, IMAGE_W = 1080, 1920
 IMAGE_TOPIC = robot.IMAGE_TOPIC
 IMAGE_RATE = robot.CAMERA_SAMPLE_RATE
 ODOM_TOPIC = robot.ODOM_TOPIC
