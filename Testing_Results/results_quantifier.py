@@ -169,6 +169,7 @@ def get_lists():
 
                 all_points = np.vstack((point_br, point_tl))
                 patch = get_patch_dimension(all_points)
+
                 crop_width = patch.max_x - patch.min_x
                 crop_height = patch.max_y - patch.min_y
 
@@ -177,7 +178,7 @@ def get_lists():
 
                 rect_tl = np.int32([tl_x, tl_y])
                 rect_br = rect_tl + [crop_width, crop_height]
-                # Appending the rectangle to the list
+
                 rectangle_list[y, x] = np.array([rect_tl, rect_br])
 
     return rectangle_list, grid_list
@@ -219,48 +220,41 @@ def predict_costs(img, img_depth, img_normals, rectangle_list, model):
     Returns:
         Costmap : A numpy array of X*Y dimension with the costs
     """
-    # Intializing buffers
     costmap = np.zeros((viz.Y, viz.X))
 
-    # Turn off gradients computation
     with torch.no_grad():
-        # Iteratinf on the rectangles
         for x in range(viz.X):
             for y in range(viz.Y):
-                # Getting the rectangle coordinates
                 rectangle = rectangle_list[y, x]
+                if np.all(rectangle == 0):
+                    continue
 
-                # If the rectangle is not empty (Check if we considered beforehand that it was useful to crop there)
-                if np.any(rectangle != 0):
-                    crop_patch = (
-                        rectangle[0, 0],
-                        rectangle[0, 1],
-                        rectangle[1, 0],
-                        rectangle[1, 1],
-                    )
-                    crop = img.crop(crop_patch)
-                    depth_crop = img_depth.crop(crop_patch)
-                    normals_crop = img_normals.crop(crop_patch)
+                crop_patch = (
+                    rectangle[0, 0],
+                    rectangle[0, 1],
+                    rectangle[1, 0],
+                    rectangle[1, 1],
+                )
+                crop = img.crop(crop_patch)
+                depth_crop = img_depth.crop(crop_patch)
+                normals_crop = img_normals.crop(crop_patch)
 
-                    input = get_model_input(
-                        crop, depth_crop, normals_crop, VELOCITY
-                    )
+                input = get_model_input(
+                    crop, depth_crop, normals_crop, VELOCITY
+                )
 
-                    output = model(*input)
+                output = model(*input)
 
-                    if viz.REGRESSION == True:
-                        # Case Regression
-                        cost = output.cpu().item()
-                    else:
-                        # Case Classification
-                        softmax = nn.Softmax(dim=1)
-                        output = softmax(output)
-                        output = output.cpu()[0]
-                        probs = output.numpy()
-                        cost = np.dot(probs, np.transpose(midpoints)).item()
+                if viz.REGRESSION:
+                    cost = output.cpu().item()
+                else:
+                    softmax = nn.Softmax(dim=1)
+                    output = softmax(output)
+                    output = output.cpu()[0]
+                    probs = output.numpy()
+                    cost = np.dot(probs, np.transpose(midpoints)).item()
 
-                    # Filling the output array (the numeric costmap)
-                    costmap[y, x] = cost
+                costmap[y, x] = cost
 
     return costmap
 
