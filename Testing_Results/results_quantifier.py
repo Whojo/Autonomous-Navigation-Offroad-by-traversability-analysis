@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 from PIL import Image
+import matplotlib.pyplot as plt
 
 import params.visualparams as viz
 from src.utils.grid import get_grid_lists
@@ -116,6 +117,44 @@ def cost_to_color(value, min, max):
         The normalized value
     """
     return (value - min) / (max - min) * 255
+
+
+def plt_display(img: np.array, costmap: np.array, save_path: str = None):
+    _, (ax1, ax2) = plt.subplots(1, 2)
+    rectangle_list, grid_list = get_grid_lists()
+
+    points_list = grid_list[rectangle_list != None]
+    for points_image in points_list:
+        centroid = np.mean(points_image, axis=0)
+        cv2.circle(
+            img,
+            tuple(np.int32(centroid)),
+            radius=4,
+            color=(0, 0, 255),
+            thickness=-1,
+        )
+
+        # Display the frontiers of the cell
+        points_image_reshape = points_image.reshape((-1, 1, 2))
+        cv2.polylines(
+            img,
+            np.int32([points_image_reshape]),
+            True,
+            (0, 255, 0),
+            2,
+        )
+
+    ax1.imshow(img)
+    ax1.axis("off")
+
+    colormap = ax2.imshow(costmap[::-1, :], cmap="hot_r", vmin=2, vmax=6)
+    ax2.set_xticks([])
+    ax2.set_yticks([])
+    plt.colorbar(colormap, ax=ax2, shrink=0.3)
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches="tight", dpi=300)
+    plt.show()
 
 
 def display(
@@ -262,6 +301,8 @@ if __name__ == "__main__":
 
         max_cost = np.max([costmap, costmap_by_hand])
         min_cost = np.min([costmap, costmap_by_hand])
+
+        # plt_display(np.array(img), costmap)
 
         img = cv2.imread(str(file))
         display(
