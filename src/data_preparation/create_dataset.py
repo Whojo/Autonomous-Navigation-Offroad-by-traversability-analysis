@@ -72,6 +72,7 @@ plt.rcParams["text.usetex"] = True  # Render Matplotlib text with Tex
 
 
 VelocityType = Enum("VelocityType", ["ODOMETRIC", "MANUAL"])
+CostType = Enum("CostType", ["SIAMESE", "FORMULA"])
 RectangleDim = namedtuple("RectangleDim", ["min_x", "max_x", "min_y", "max_y"])
 
 
@@ -337,30 +338,41 @@ def get_patch_dimension(all_points: np.array) -> RectangleDim:
     return _to_valid_patch_dimension(rec)
 
 
+def raw_imu_to_features(
+    raw_imu_line: dict,
+) -> np.array:
+    return traversalcost.utils.get_features(
+        raw_imu_line["roll"],
+        raw_imu_line["pitch"],
+        raw_imu_line["vertical_acceleration"],
+        params.dataset.FEATURES,
+    )
+
+
+def raw_imu_to_formula_traversal_cost(
+    raw_imu_line: dict,
+) -> float:
+    """
+    Calculates the traversal cost on a single IMU pathc as defined by
+    Waibel et al. (2022). The normalisation between 0 and 1 from the original
+    formula has been removed, as judged unnecessary and less handy to compute.
+    """
+    data = np.array(
+        [
+            raw_imu_line["roll"],
+            raw_imu_line["pitch"],
+            raw_imu_line["vertical_acceleration"],
+        ]
+    )
+    data = np.abs(data)
+
+    return np.mean(data)
+
+
 class DatasetBuilder:
     """
     Class to build a terrain traversability dataset from ROS bag files
     """
-
-    # Initialize the bridge between ROS and OpenCV images
-    bridge = cv_bridge.CvBridge()
-
-    # Generate a dummy signal and extract the features
-    dummy_signal = np.random.rand(100)
-    dummy_features = params.dataset.FEATURES["function"](dummy_signal)
-
-    # Get the size of the features vector
-    features_size = 3 * len(dummy_features)
-
-    # Create an array to store the features from which the traversal cost
-    # is designed
-    features = np.zeros((params.dataset.NB_IMAGES_MAX, features_size))
-
-    # Create an array to store the velocities
-    velocities = np.zeros((params.dataset.NB_IMAGES_MAX, 1))
-
-    # Create an array to store the pitch rate variance
-    pitch_rate_variance = np.zeros((params.dataset.NB_IMAGES_MAX, 1))
 
     def __init__(self, name: str) -> None:
         """Constructor of the class
@@ -404,7 +416,7 @@ class DatasetBuilder:
         velocity_type: VelocityType = VelocityType.ODOMETRIC,
         filter_cohesion: bool = True,
         filter_coherence: bool = True,
-    ) -> None:
+    ) -> (np.array, np.array):
         """Write images and compute features from a list of bag files
 
         Args:
@@ -424,7 +436,13 @@ class DatasetBuilder:
             filter_coherence (bool, optional): If True, discard images with a
                 non-coherent velocity on the patch (i. e. extremum velocity are
                 too far from the mean). Default to True.
+
+        Returns:
+            tuple: A tuple containing the raw IMU signals and the velocities.
         """
+        velocities = []
+        raw_imu = []
+
         index_image = 0
 
         bag_files = _get_recursive_bag_files(files)
@@ -468,10 +486,11 @@ class DatasetBuilder:
                     if filter_static and velocity == 0:
                         continue
 
-                image = self.bridge.imgmsg_to_cv2(
+                bridge = cv_bridge.CvBridge()
+                image = bridge.imgmsg_to_cv2(
                     msg_image, desired_encoding="passthrough"
                 )
-                depth_image = self.bridge.imgmsg_to_cv2(
+                depth_image = bridge.imgmsg_to_cv2(
                     msg_depth, desired_encoding="passthrough"
                 )
 
@@ -742,25 +761,19 @@ class DatasetBuilder:
 
                     # Extract features from the IMU signals and fill the
                     # features array
-                    self.features[
-                        index_image
-                    ] = traversalcost.utils.get_features(
-                        roll_velocity_values,
-                        pitch_velocity_values,
-                        vertical_acceleration_values,
-                        params.dataset.FEATURES,
-                    )
-
-                    # Compute the variance of the pitch rate signal
-                    self.pitch_rate_variance[index_image] = np.var(
-                        pitch_velocity_values
+                    raw_imu.append(
+                        {
+                            "roll": roll_velocity_values,
+                            "pitch": pitch_velocity_values,
+                            "vertical_acceleration": vertical_acceleration_values,
+                        }
                     )
 
                     # Compute the mean velocity on the current patch
                     if velocity_type == VelocityType.ODOMETRIC:
                         velocity = np.mean(x_velocity)
 
-                    self.velocities[index_image] = velocity
+                    velocities.append(velocity)
 
                     # Increment the index of the current image
                     index_image += 1
@@ -778,40 +791,57 @@ class DatasetBuilder:
 
             bag.close()
 
-        # Keep only the rows that are not filled with zeros
-        self.features = self.features[np.any(self.features, axis=1)]
-        self.velocities = self.velocities[np.any(self.velocities, axis=1)]
-        self.pitch_rate_variance = self.pitch_rate_variance[
-            np.any(self.pitch_rate_variance, axis=1)
-        ]
+        return raw_imu, velocities
 
-    def compute_traversal_costs(
-        self, plot_velocity_distribution: bool = False
-    ):
+    def compute_siamese_traversal_costs(self, raw_imu: list) -> np.array:
         """
         Computes the traversal costs for the given features using a Siamese Network model.
         The costs are then discretized using K-means binning and the midpoints of the bins are saved in the dataset directory.
         If plot_velocity_distribution is True, a histogram of the traversal costs is plotted.
 
         Args:
-            plot_velocity_distribution (bool): Whether to plot a histogram of the traversal costs or not.
+            raw_imu (list): A list of dictionaries containing the raw IMU signals.
+                dict_keys(['roll', 'pitch', 'vertical_acceleration'])
 
         Returns:
-            tuple: A tuple containing the original traversal costs and the discretized traversal costs.
+            np.array: Traversal costs.
         """
-        # Load a model
+        features = np.array(list(map(raw_imu_to_features, raw_imu)))
         model = traversalcost.traversal_cost.SiameseNetwork(
-            input_size=self.features_size
+            input_size=features.shape[1],
         )
 
-        # Compute the costs with the model
-        costs = traversalcost.traversal_cost.apply_model(
-            features=self.features,
+        return traversalcost.traversal_cost.apply_model(
+            features=features,
             model=model,
             params=params.dataset.SIAMESE_PARAMS,
             device=params.dataset.DEVICE,
         )
 
+    def compute_formula_traversal_costs(self, raw_imu: list) -> np.array:
+        """
+        Calculates the traversal cost on a list as defined by Waibel et al. (2022).
+        """
+        costs = map(raw_imu_to_formula_traversal_cost, raw_imu)
+        costs = np.array(list(costs))
+        return costs.reshape(-1, 1)
+
+    def discritize_traversal_costs(
+        self,
+        costs: np.array,
+        *,
+        plot_velocity_distribution: bool = False,
+    ) -> np.array:
+        """
+        Discretizes the traversal costs using K-means binning.
+
+        Args:
+            costs (np.array): Array of traversal costs.
+            plot_velocity_distribution (bool, optional): Whether to plot the velocity distribution. Defaults to False.
+
+        Returns:
+            np.array: Array of discretized traversal costs.
+        """
         # Apply K-means binning
         discretizer = KBinsDiscretizer(
             n_bins=params.traversal_cost.NB_BINS,
@@ -835,65 +865,58 @@ class DatasetBuilder:
             plt.ylabel("Samples")
             plt.show()
 
-        return costs, digitized_costs
+        return digitized_costs
 
-    def write_traversal_costs(self) -> None:
+    def write_traversal_costs(
+        self,
+        raw_imu: list,
+        velocities: list,
+        *,
+        cost_type: CostType = CostType.SIAMESE,
+    ) -> None:
         """
         Write the traversal costs in a csv file.
-        """
-        # Open the file in the write mode
-        file_costs = open(self.csv_name, "w")
 
-        # Create a csv writer
+        Args:
+            raw_imu (list): A list of dictionaries containing the raw IMU signals.
+                dict_keys(['roll', 'pitch', 'vertical_acceleration'])
+            velocities (list): A list of velocities.
+            cost_type (CostType): The type of traversal cost to compute.
+                SIAMESE: compute the traversal cost using a Siamese Network model.
+                FORMULA: compute the traversal cost using a manually defined formula
+                    (mean of the absolute values of the roll, pitch angular velocities, and vertical acceleration)
+        """
+        file_costs = open(self.csv_name, "w")
         file_costs_writer = csv.writer(file_costs, delimiter=",")
 
-        # Write the first row (columns title)
         headers = [
             "image_id",
             "traversal_cost",
             "traversability_label",
             "linear_velocity",
         ]
-        # headers = ["image_id",
-        #            "traversal_cost",
-        #            "traversability_label",
-        #            "trajectory_id",
-        #            "image_timestamp"]  #TODO:
         file_costs_writer.writerow(headers)
 
-        # print(self.velocities, self.features)
+        if cost_type == CostType.SIAMESE:
+            costs = self.compute_siamese_traversal_costs(raw_imu)
+        elif cost_type == CostType.FORMULA:
+            costs = self.compute_formula_traversal_costs(raw_imu)
+        else:
+            raise ValueError("Invalid cost type")
 
-        costs, labels = self.compute_traversal_costs()
-        # costs, labels, slip_costs = self.compute_traversal_costs()
-
-        # TODO:
-        # trajectories_ids = self.features[:, 13]
-        # images_timestamps = self.features[:, 14]
+        labels = self.discritize_traversal_costs(costs)
 
         for i in range(costs.shape[0]):
-            # Give the image a name
             image_name = f"{i:05d}"
 
-            # cost = slip_costs[i, 0]
             cost = costs[i, 0]
             label = labels[i, 0]
-            linear_velocity = self.velocities[i, 0]
+            linear_velocity = velocities[i]
 
-            # TODO:
-            # trajectory_id = trajectories_ids[i]
-            # image_timestamp = images_timestamps[i]
-
-            # Add the image index and the associated score in the csv file
             file_costs_writer.writerow(
                 [str(image_name), cost, label, linear_velocity]
-            )  # TODO:
-            # file_costs_writer.writerow([image_name,
-            #                             cost,
-            #                             label,
-            #                             trajectory_id,
-            #                             image_timestamp])
+            )
 
-        # Close the csv file
         file_costs.close()
 
     def create_train_test_splits(
@@ -995,10 +1018,10 @@ class DatasetBuilder:
 # this file is imported in another one
 if __name__ == "__main__":
     dataset = DatasetBuilder(
-        name="multimodal_siamese_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered"
+        name="multimodal_formula_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered"
     )
 
-    dataset.write_images_and_compute_features(
+    raw_imu, velocities = dataset.write_images_and_compute_features(
         files=[
             ## Grass and roal only
             # "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
@@ -1033,6 +1056,10 @@ if __name__ == "__main__":
         filter_cohesion=False,
     )
 
-    dataset.write_traversal_costs()
+    dataset.write_traversal_costs(
+        raw_imu,
+        velocities,
+        cost_type=CostType.FORMULA,
+    )
 
     dataset.create_train_test_splits()
