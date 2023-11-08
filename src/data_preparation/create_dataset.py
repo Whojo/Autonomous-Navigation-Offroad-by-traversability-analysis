@@ -442,6 +442,7 @@ class DatasetBuilder:
         """
         velocities = []
         raw_imu = []
+        source_bagfiles = []
 
         index_image = 0
 
@@ -774,6 +775,7 @@ class DatasetBuilder:
                         velocity = np.mean(x_velocity)
 
                     velocities.append(velocity)
+                    source_bagfiles.append(file)
 
                     # Increment the index of the current image
                     index_image += 1
@@ -791,7 +793,7 @@ class DatasetBuilder:
 
             bag.close()
 
-        return raw_imu, velocities
+        return raw_imu, velocities, source_bagfiles
 
     def compute_siamese_traversal_costs(self, raw_imu: list) -> np.array:
         """
@@ -871,6 +873,7 @@ class DatasetBuilder:
         self,
         raw_imu: list,
         velocities: list,
+        source_bagfiles: list,
         *,
         cost_type: CostType = CostType.SIAMESE,
     ) -> None:
@@ -881,6 +884,7 @@ class DatasetBuilder:
             raw_imu (list): A list of dictionaries containing the raw IMU signals.
                 dict_keys(['roll', 'pitch', 'vertical_acceleration'])
             velocities (list): A list of velocities.
+            source_bagfiles (list): A list of source bagfiles.
             cost_type (CostType): The type of traversal cost to compute.
                 SIAMESE: compute the traversal cost using a Siamese Network model.
                 FORMULA: compute the traversal cost using a manually defined formula
@@ -894,6 +898,7 @@ class DatasetBuilder:
             "traversal_cost",
             "traversability_label",
             "linear_velocity",
+            "source_bagfile",
         ]
         file_costs_writer.writerow(headers)
 
@@ -912,9 +917,10 @@ class DatasetBuilder:
             cost = costs[i, 0]
             label = labels[i, 0]
             linear_velocity = velocities[i]
+            source_bagfile = source_bagfiles[i]
 
             file_costs_writer.writerow(
-                [str(image_name), cost, label, linear_velocity]
+                [str(image_name), cost, label, linear_velocity, source_bagfile]
             )
 
         file_costs.close()
@@ -1018,10 +1024,14 @@ class DatasetBuilder:
 # this file is imported in another one
 if __name__ == "__main__":
     dataset = DatasetBuilder(
-        name="multimodal_formula_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered"
+        name="tmp_multimodal_formula_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered"
     )
 
-    raw_imu, velocities = dataset.write_images_and_compute_features(
+    (
+        raw_imu,
+        velocities,
+        source_bagfiles,
+    ) = dataset.write_images_and_compute_features(
         files=[
             ## Grass and roal only
             # "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
@@ -1059,6 +1069,7 @@ if __name__ == "__main__":
     dataset.write_traversal_costs(
         raw_imu,
         velocities,
+        source_bagfiles,
         cost_type=CostType.FORMULA,
     )
 
