@@ -18,6 +18,7 @@ data_Arnaud/
 # VSCode specific
 .vscode/
 launch.json
+settings.json
 
 # Images and checkpoints should not be pushed
 *.png
