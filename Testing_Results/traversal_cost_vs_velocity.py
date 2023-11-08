@@ -10,7 +10,7 @@ import pandas as pd
 # Importing custom made parameters
 import params.visualparams as viz
 from params import PROJECT_PATH
-from src.models_development.multimodal_velocity_regression_alt.model import (
+from models_development.multimodal_velocity_regression_alt.model import (
     ResNet18Velocity_Regression_Alt,
 )
 

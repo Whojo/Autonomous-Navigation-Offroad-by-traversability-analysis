@@ -2,7 +2,7 @@ import numpy as np
 
 import utilities.frames as frames
 import params.visualparams as viz
-from src.data_preparation.create_dataset import get_patch_dimension
+from data_preparation.create_dataset import get_patch_dimension
 
 
 def _get_corners(x, y):

@@ -20,12 +20,10 @@ This project is about learning to estimate terrain traversability from vision fo
 
 - `ROS_NODE` is a python node for ROS, it loads the network and reads a rosbag / listens to the ZED node, and build a costmap. It can even record    it's output in a video. Currently it cannot be interfaced with ROS' stack navigation but it's on the to-do-list.
 
-- `script` has the install and uninstall scripts for properly install the parameters python package
-
 - `src` has the big chunks of code
   - `data_preparation` contains the tools to prepare a dataset for the network
-    - `Create_dataset` takes a list of rosbags paths and extract images from them, gives them a cost and builds a dataset in the `dataset` folder
-    - `Data_preparation` & `data_transforms` are toy tools to try to prepare the data and apply transforms to it, as a standalone tool.
+    - `create_dataset` takes a list of rosbags paths and extract images from them, gives them a cost and builds a dataset in the `dataset` folder
+    - `data_preparation` & `data_transforms` are toy tools to try to prepare the data and apply transforms to it, as a standalone tool.
     - `image_extractor` is a tool for reading rosbags and extract images from the camera canal.
     - `dataset_modif` is a tool to apply some statistics-based filter to a dataset to balance it better
     - `show_dataset` creates a collage of pertinent samples from a dataset and stores it in the `results` folder
@@ -43,33 +41,34 @@ This project is about learning to estimate terrain traversability from vision fo
   - `traversal_cost` contains all the networks used to give the images a cost in the dataset construction. It's structure is very similar to `model_development` so I won't say more than it's there that the SSL-Space-Magic happens.
   - `utils` contains a variety of small functions mainly for drawing robot-related structures (paths, grids, points...) on a cv image.
 
+# Installation
+This project has been developed on Ubuntu 20.04 with ROS Noetic. It is highly recommended to use a virtual environment to install the dependencies.
+ROS Noetic can be installed following the instructions on the [ROS website](http://wiki.ros.org/noetic/Installation/Ubuntu).
 
-# Code usage
-Assuming you have ROS Noetic installed and some rosbags at hand for the training :
+The dependencies can easily be installed with [poetry](https://python-poetry.org/) by running the following command in the root folder of the project:
+```sh
+poetry install
+```
 
-1- Go in the parameters `src/params` and set up all the variable following your preferences or your hardware configuration
+Do not hesitate to learn more about poetry [here](https://python-poetry.org/docs/basic-usage/).
 
-2- setup the packages of parameters running `scripts/install.sh`
+# Develop in VSCode
+Change your default interpreter to the one returned by the following command: 
+```sh
+echo "$(poetry show -v | head -n 1)/bin/python"
+```
 
-3- Go in `src/traversal_cost/siamese_network` and run `create_dataset` after setting at the bottom which rosbags you want to use
+In VSCode this can easily be done with the "Python: Select Interpreter" command from the "Command Palette" (Ctrl+Shift+P) in which you can paste the previously mentionned path (more information [here](https://code.visualstudio.com/docs/python/environments#_working-with-python-interpreters)).
 
-4- run `main.py` from the same folder in order to train your siamese network. When the goddamn thing has the correct mojo (you can check it out in the logs folder), proceed to the next step
 
-5- In `src/data_preparation/` run `create_dataset.py` after specifying which rosbags you want to use. If you want to tailor a little bit this dataset (the dataset creation car sometimes be very messy) you can then use dataset_modif to balance your new dataset.
+Lastly, if you intend to use Notebooks directly from VSCode, first, you should select the same interpreter as well, but also correctly configure ROS Noetic for this purpose.
+The following command does the tricks:
+```sh
+echo "source /opt/ros/noetic/setup.bash" >> .profile
+```
 
-6- Go in `src/models_development` and choose the folder corresponding to the model of your choice. You can even try to build a new model by copy-pasting and existing one and editing the .py files. Once done, run the .ipynb at least until the log generation cell.
+This adds the ROS environment setup step in the .profile script (which is executed at login) rather than in .bashrc (as the default [ROS Noetic installation procedure](http://wiki.ros.org/noetic/Installation/Ubuntu) advises, but which would then not be run for VSCode's notebook). Don't forget to restart your computer in order for the changes to take effect.
 
-7- In the logs folder a subfolder named after the date and time of the training will appear. Along several useful informations and results, the .params are the weights of your network.
-
-8- Copy the folder `ROS_NODE/visual_traversability` in your `catkin_ws`.
-
-9- In the visualparams.py parameters file, don't forget to update the model and the weights you want to use.
-
-10- Launch your visual_traversability node
-
-11- ???
-
-12- Profit!
 
 # Tests
 You can easily run the tests by running the following command in the root folder of the project:
@@ -83,5 +82,4 @@ Not all files are being tested for now, but tests are being added progressively.
 
 # TO-DO
 - Although the current state of the git indicates an extensive research and training, there's always room for improvement through more data collection, new custom transforms and new models.
-
 - the ros node actually just gather a costmap from the network output. The next big step would be to add the output as a layer of costmap and pack it in an usable navigation plugin.

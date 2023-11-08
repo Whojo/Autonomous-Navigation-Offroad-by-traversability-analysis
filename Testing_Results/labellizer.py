@@ -5,7 +5,7 @@ from PIL import Image
 
 from params import visualparams as viz
 from params import PROJECT_PATH
-from src.utils.grid import get_grid_lists
+from utils.grid import get_grid_lists
 
 
 def enter_costs(img, rectangle_list):

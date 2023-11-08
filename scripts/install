@@ -1,4 +1,0 @@
-#!/bin/bash
-
-# Install custom packages
-pip install -e src/utils -e src/params -e src/traversal_cost -e src/depth -e src/model_uncertainty -e src/models_export

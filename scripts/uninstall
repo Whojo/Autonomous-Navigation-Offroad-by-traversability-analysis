@@ -1,4 +1,0 @@
-#!/bin/bash
-
-# Uninstall custom packages
-pip uninstall utilities params traversalcost depth uncertainty models_export

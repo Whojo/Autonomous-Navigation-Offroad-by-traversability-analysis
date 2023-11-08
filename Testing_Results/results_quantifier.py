@@ -8,11 +8,11 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 import params.visualparams as viz
-from src.utils.grid import get_grid_lists
-from src.models_development.multimodal_velocity_regression_alt.dataset import (
+from utils.grid import get_grid_lists
+from models_development.multimodal_velocity_regression_alt.dataset import (
     DEFAULT_MULTIMODAL_TRANSFORM,
 )
-from src.models_development.multimodal_velocity_regression_alt.model import (
+from models_development.multimodal_velocity_regression_alt.model import (
     ResNet18Velocity_Regression_Alt,
 )
 from params import PROJECT_PATH
