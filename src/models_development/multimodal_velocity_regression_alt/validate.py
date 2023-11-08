@@ -34,7 +34,8 @@ def validate(
     model.eval()
 
     # Add a progress bar
-    val_loader_pbar = tqdm(val_loader, unit="batch")
+    # val_loader_pbar = tqdm(val_loader, unit="batch")
+    val_loader_pbar = val_loader
 
     # Turn off gradients computation (the backward computational graph is
     # built during the forward pass and weights are updated during the backward
@@ -43,7 +44,7 @@ def validate(
         # Loop over the validation batches
         for images, traversal_costs, linear_velocities in val_loader_pbar:
             # Print the epoch and validation mode
-            val_loader_pbar.set_description(f"Epoch {epoch} [val]")
+            # val_loader_pbar.set_description(f"Epoch {epoch} [val]")
 
             # Move images and traversal scores to GPU (if available)
             images = images.to(device)
@@ -65,7 +66,7 @@ def validate(
             )
 
             # Print the batch loss next to the progress bar
-            val_loader_pbar.set_postfix(batch_loss=loss.item())
+            # val_loader_pbar.set_postfix(batch_loss=loss.item())
 
             # Accumulate batch loss to average over the epoch
             val_regression_loss += loss.item()

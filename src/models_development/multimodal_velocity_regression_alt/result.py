@@ -10,18 +10,19 @@ from pathlib import Path
 import params.learning
 
 
-plt.rcParams.update({
-    "pgf.texsystem": "pdflatex",
-    'font.family': 'serif',
-    'text.usetex': True,
-    'pgf.rcfonts': False,
-})
+plt.rcParams.update(
+    {
+        "pgf.texsystem": "pdflatex",
+        "font.family": "serif",
+        "text.usetex": True,
+        "pgf.rcfonts": False,
+    }
+)
 
 
-def parameters_table(dataset: Path,
-                     learning_params: dict) -> List[List[Any]]:
+def parameters_table(dataset: Path, learning_params: dict) -> List[List[Any]]:
     """Generate a table containing the parameters used to train the network
-    
+
     Args:
         dataset (Path): The path to the dataset
         learning_params (dict): The parameters used to train the network
@@ -54,22 +55,26 @@ def parameters_table(dataset: Path,
             learning_params["momentum"],
         ],
     ]
-    
+
     # Generate the table
-    table = tabulate(data,
-                     headers="firstrow",
-                     tablefmt="fancy_grid",
-                     maxcolwidths=20,
-                     numalign="center",)
-    
+    table = tabulate(
+        data,
+        headers="firstrow",
+        tablefmt="fancy_grid",
+        maxcolwidths=20,
+        numalign="center",
+    )
+
     return table
 
 
-def generate_log(results_directory: Path,
-                 test_regression_loss: float,
-                 parameters_table: List[List[Any]],
-                 model: torch.nn.Module,
-                 regression_loss_values: torch.Tensor) -> None:
+def generate_log(
+    results_directory: Path,
+    test_regression_loss: float,
+    parameters_table: List[List[Any]],
+    model: torch.nn.Module,
+    regression_loss_values: torch.Tensor,
+) -> None:
     """Create a directory to store the results of the training and save the
     results in it
 
@@ -86,8 +91,8 @@ def generate_log(results_directory: Path,
         the highest regression loss
         test_losses_uncertainty (list): Test loss values when removing samples
         with the highest uncertainty
-    """    
-    os.mkdir(results_directory)
+    """
+    results_directory.mkdir(parents=True)
 
     train_losses = regression_loss_values[0]
     val_losses = regression_loss_values[1]
@@ -99,7 +104,9 @@ def generate_log(results_directory: Path,
             f"Validation regression loss: {val_losses[-1]}\n"
         )
 
-    with open(results_directory / "parameters_table.txt", "w") as parameters_file:
+    with open(
+        results_directory / "parameters_table.txt", "w"
+    ) as parameters_file:
         parameters_file.write(parameters_table)
 
     with open(results_directory / "network.txt", "w") as network_file:
@@ -113,18 +120,18 @@ def generate_log(results_directory: Path,
 
     plt.legend()
     plt.xlabel("Epoch")
-    
+
     plt.savefig(results_directory / "learning_curve.png")
-    
+
     # Save the model parameters
-    torch.save(model.state_dict(),
-               results_directory / params.learning.PARAMS_FILE)
+    torch.save(
+        model.state_dict(), results_directory / params.learning.PARAMS_FILE
+    )
 
 
 # Main program
 # The "__main__" flag acts as a shield to avoid these lines to be executed if
 # this file is imported in another one
 if __name__ == "__main__":
-    
     # Test the functions
     print(parameters_table())
