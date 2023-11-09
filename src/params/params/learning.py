@@ -19,8 +19,8 @@ TEST_SIZE = 0.15
 # Set learning parameters
 LEARNING = {
     "batch_size": 64,
-    "nb_epochs": 200,
-    "learning_rate": 0.0009,
+    "nb_epochs": 100,
+    "learning_rate": 0.0001,
 }
 
 
