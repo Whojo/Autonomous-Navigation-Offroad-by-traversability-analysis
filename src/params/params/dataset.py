@@ -2,13 +2,13 @@
 
 import torch
 
-# Import custom packages
+from params import PROJECT_PATH
 import traversalcost.features
 
 
-#################################
-## Dataset creation parameters ##
-#################################
+##############################################
+## Vision Model Dataset creation parameters ##
+##############################################
 
 # Upper bound of the number of images to be extracted from the bag files
 NB_IMAGES_MAX = 100000
@@ -41,6 +41,41 @@ TIME_DELTA = 0.05  # [s]
 # Manual velocity labels of extracted IMU sequences
 LABELS_PATH = "src/traversal_cost/datasets/dataset_200Hz_wrap_fft/labels.csv"
 
+###################################################################
+## Semantic segmentation Distilation Dataset creation parameters ##
+###################################################################
+
+# Semantic segmentation model to use ("vit_h", "vit_b")
+sam_model_name = "vit_h"
+
+# Path to the semantic segmentation model checkpoint
+sam_checkpoint = (
+    PROJECT_PATH / "src/semantic_segmentation/models/sam_vit_h.pth"
+)
+
+# Vision model checkpoint (from "model_development" folder,
+# e.g. "multimodal_velocity_regression_alt")
+weight_path = (
+    PROJECT_PATH
+    / "src/models_development/multimodal_velocity_regression_alt/logs/_post_hp_tuning_data_augmentation/network.params"
+)
+
+# Stability score threshold for the semantic segmentation mask with Segment
+# Anything model
+stability_score_thresh = 0.8
+
+# Number of patches sampled in each image's mask to
+# compute the traversal cost of the mask
+nb_total_patch = 100
+
+# Number of patches kept for the traversal cost computation
+# that are the most centered on the mask from the patches sampled
+# (nb_total_patch)
+nb_centered_patch = 10
+
+# Threshold to filter SAM's segmentation based on its completeness
+# (i.e. the ratio of pixels included in at least one mask)
+completeness_threshold = 0.8
 
 ##########################################
 ## Features extraction from IMU signals ##
@@ -70,7 +105,8 @@ FEATURES = {
 
 # Path to the parameters file
 SIAMESE_PARAMS = (
-    "src/traversal_cost/siamese_network/logs/_2023-09-27-12-22-04/siamese.params"
+    PROJECT_PATH
+    / "src/traversal_cost/siamese_network/logs/_2023-09-27-12-22-04/siamese.params"
 )
 
 # Use GPU if available

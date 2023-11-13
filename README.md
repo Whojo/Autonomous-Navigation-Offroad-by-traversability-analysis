@@ -20,6 +20,8 @@ This project is about learning to estimate terrain traversability from vision fo
 
 - `ROS_NODE` is a python node for ROS, it loads the network and reads a rosbag / listens to the ZED node, and build a costmap. It can even record    it's output in a video. Currently it cannot be interfaced with ROS' stack navigation but it's on the to-do-list.
 
+- `semantic_segmentation` contains experiment on semantic segmentation. The semantic segmentation builds up on the `models_development` pipeline to smooth the results. A distillation method is also implemented to enable its computation on the Jetson Nano hardware.
+
 - `src` has the big chunks of code
   - `data_preparation` contains the tools to prepare a dataset for the network
     - `create_dataset` takes a list of rosbags paths and extract images from them, gives them a cost and builds a dataset in the `dataset` folder
@@ -51,6 +53,9 @@ poetry install
 ```
 
 Do not hesitate to learn more about poetry [here](https://python-poetry.org/docs/basic-usage/).
+
+## Weights for the semantic segmentation
+To successfully use the semantic segmentation module, you would need to have Segment Anything's weights in "semantic_segmentation/models/" folder. These can be downloaded from [here](https://github.com/facebookresearch/segment-anything#model-checkpoints). If you only want to use `sam_vit_h.pth` (which is the largest SAM's model and the one we used), please download it [here](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pt.h).
 
 # Develop in VSCode
 Change your default interpreter to the one returned by the following command: 

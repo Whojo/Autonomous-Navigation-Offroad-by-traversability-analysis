@@ -19,6 +19,7 @@ packages = [
     { include = "model_uncertainty", from = "src" },
     { include = "params", from = "src/params" },
     { include = "ros_nodes", from = "src" },
+    { include = "semantic_segmentation", from = "src" },
     { include = "traversalcost", from = "src/traversal_cost" },
     { include = "utils", from = "src" },
     { include = "utilities", from = "src/utils" },
