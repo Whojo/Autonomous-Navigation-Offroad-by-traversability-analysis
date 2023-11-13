@@ -419,3 +419,58 @@ def downsample_to_grid(
             grid[x, y] = downsampling_fct(pxls)
 
     return grid
+
+
+def fill_segmentation(masks: list) -> list:
+    """
+    Fill segmentation masks from the largest to the smallest in order to
+    form a complete segmentation (i.e. the union of all masks has no hole).
+
+    Only necessary modification are kept.
+
+    Args:
+        masks (list): A list of dictionaries, where each dictionary contains a
+            binary mask (with "segmentation" key) and its area (with "area"
+            key).
+
+    Returns:
+        list: A list of dictionaries, where each dictionary contains a
+            binary mask and its area.
+    """
+    if len(masks) == 0:
+        raise ValueError("Empty list of masks provided.")
+
+    union_mask = reduce(np.logical_or, [m["segmentation"] for m in masks])
+    dilation_kernel = np.ones((3, 3), dtype=np.uint8)
+
+    complete_segmentation_list = []
+    masks_to_process = sorted(masks, key=(lambda x: x["area"]), reverse=True)
+
+    while not np.all(union_mask):
+        mask = masks_to_process.pop(0)
+        dilated_segmentation = cv2.dilate(
+            mask["segmentation"].astype(np.uint8),
+            dilation_kernel,
+            iterations=1,
+        ).astype(bool)
+
+        # If the dilated segmentation does not change the union mask,
+        # then the mask is not close to any holes anymore
+        # and it won't help us any further to fill the holes.
+        # Save it and move on to the next mask.
+        extra = dilated_segmentation & ~union_mask
+        if not np.any(extra):
+            complete_segmentation_list.append(mask)
+        else:
+            new_segmentation = mask["segmentation"] | extra
+            masks_to_process.append(
+                {
+                    "segmentation": new_segmentation,
+                    "area": new_segmentation.sum(),
+                }
+            )
+
+        union_mask |= extra.astype(bool)
+
+    complete_segmentation_list.extend(masks_to_process)
+    return complete_segmentation_list
