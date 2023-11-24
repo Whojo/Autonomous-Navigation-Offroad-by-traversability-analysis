@@ -26,3 +26,6 @@ settings.json
 *.pth
 *.params
 *.npy
+
+docs/
+anotaenv/
