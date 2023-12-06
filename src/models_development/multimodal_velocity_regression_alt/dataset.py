@@ -123,29 +123,35 @@ class TraversabilityDataset(Dataset):
 
 DEFAULT_IMAGE_AUGMENTATION_TRANSFORM = transforms.Compose(
     [
-        transforms.ColorJitter(**params.learning.JITTER_PARAMS),
-        # Black patch
-        Cutout(0.5),
-        Shadowcasting(0.5),
-        # Gaussian noise
-        # transforms.Lambda(lambda x: x + (0.001**0.5) * torch.randn(x.shape)),
+        transforms.GaussianBlur(3),
+        transforms.GaussianBlur(7),
+        transforms.GaussianBlur(13),
+        Cutout(),
+        Shadowcasting(),
     ]
 )
 
-DEFAULT_AUGMENTATION_TRANSFORM = transforms.Compose(
+DEFAULT_AUGMENTATION_TRANSFORM = augmentation_transforms = transforms.Compose(
     [
-        # transforms.RandomHorizontalFlip(p=0.5),
-        # transforms.RandomCrop(100),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.RandomRotation(30),
+        transforms.RandomResizedCrop(
+            params.learning.IMAGE_SHAPE,
+            scale=(0.2, 1.0),
+            ratio=(3, 3),
+            antialias=True,
+        ),
     ]
 )
 
+# DEFAULT_MULTIMODAL_TRANSFORM = transforms.Resize(
+#     params.learning.IMAGE_SHAPE, antialias=True
+# )
 DEFAULT_MULTIMODAL_TRANSFORM = transforms.Compose(
     [
         transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
-        transforms.Normalize(
-            mean=NORMALIZE_PARAMS["mean"],
-            std=NORMALIZE_PARAMS["std"],
-        ),
+        transforms.Normalize(**NORMALIZE_PARAMS),
     ]
 )
 
