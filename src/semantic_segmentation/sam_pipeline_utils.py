@@ -374,17 +374,7 @@ def filter_intersection(masks: list) -> list:
     return exclusive_masks
 
 
-def _non_nul_max(x: np.array) -> float:
-    x = x[x != 0]
-    if len(x) == 0:
-        return 0
-
-    return np.max(x)
-
-
-def downsample_to_grid(
-    img: np.array, *, downsampling_fct=_non_nul_max
-) -> np.array:
+def downsample_to_grid(img: np.array, *, downsampling_fct=np.max) -> np.array:
     """
     Project a grid onto an image and downsample the image to this grid
     resolution in order to produce a low-resolution bird-eye view. This
@@ -394,7 +384,7 @@ def downsample_to_grid(
         img (np.array): The input image to downsample and project.
         downsampling_fct (function, optional): The downsampling function to
             apply to each patch in order to convert it into a single pixel.
-            Defaults to `_non_nul_max`.
+            Defaults to `np.max`.
 
     Returns:
         np.array: A low-resolution and bird-eye view version of the input
@@ -418,7 +408,9 @@ def downsample_to_grid(
             pxls = img[poly_mask == True]
             grid[x, y] = downsampling_fct(pxls)
 
-    return grid
+    # XXX: Reverse the grid to have the same orientation as the image.
+    # => prevent refactoring the `get_grid_lists` function.
+    return grid[::-1, :]
 
 
 def fill_segmentation(masks: list) -> list:
