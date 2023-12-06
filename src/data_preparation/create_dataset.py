@@ -76,7 +76,7 @@ CostType = Enum("CostType", ["SIAMESE", "FORMULA"])
 RectangleDim = namedtuple("RectangleDim", ["min_x", "max_x", "min_y", "max_y"])
 
 
-def _get_recursive_bag_files(files: list) -> list:
+def get_recursive_bag_files(files: list) -> list:
     """
     Recursively searches through a list of files and directories to find all bag files.
 
@@ -89,13 +89,15 @@ def _get_recursive_bag_files(files: list) -> list:
     bag_files = []
     for file in files:
         # Check if the file is a bag file
-        if os.path.isfile(file) and file.endswith(".bag"):
+        if file.is_file() and file.suffix == ".bag":
             bag_files.append(file)
 
-        # If the path links to a directory, go through the files inside it
-        elif os.path.isdir(file):
+        # If the file links to a directory, go through the files inside it
+        elif file.is_dir():
             bag_files.extend(
-                [file + f for f in os.listdir(file) if f.endswith(".bag")]
+                get_recursive_bag_files(
+                    [file / f for f in file.glob("**/*.bag")]
+                )
             )
 
     return bag_files
@@ -132,7 +134,18 @@ def is_bag_healthy(bag: str) -> bool:
     return True
 
 
-def _get_msg_depth(bag: rosbag.Bag, t_image: rospy.Time) -> np.array:
+def get_msg_depth(bag: rosbag.Bag, t_image: rospy.Time) -> np.array:
+    """
+    Given a rosbag and a timestamp, returns the depth image message whose timestamp is closest.
+
+    Args:
+        bag (rosbag.Bag): The rosbag containing the depth image messages.
+        t_image (rospy.Time): The timestamp of the RGB image message.
+
+    Returns:
+        np.array: The depth image message whose timestamp is closest to the given timestamp.
+    """
+
     depth_list = list(
         bag.read_messages(
             topics=[params.robot.DEPTH_TOPIC],
@@ -445,8 +458,9 @@ class DatasetBuilder:
         source_bagfiles = []
 
         index_image = 0
+        bridge = cv_bridge.CvBridge()
 
-        bag_files = _get_recursive_bag_files(files)
+        bag_files = get_recursive_bag_files(files)
         for file in tqdm(bag_files):
             bag = rosbag.Bag(file)
 
@@ -454,13 +468,13 @@ class DatasetBuilder:
             # topics and if the number of messages is consistent with the
             # sampling rate)
             if not is_bag_healthy(bag):
-                print("File " + file + " is incomplete. Skipping...")
+                print(f"File {str(file)} is incomplete. Skipping...")
                 continue
 
             for _, msg_image, t_image in bag.read_messages(
                 topics=[params.robot.IMAGE_TOPIC]
             ):
-                msg_depth = _get_msg_depth(bag, t_image)
+                msg_depth = get_msg_depth(bag, t_image)
                 if msg_depth is None:
                     continue
 
@@ -482,9 +496,12 @@ class DatasetBuilder:
                     continue
 
                 if velocity_type == VelocityType.MANUAL:
-                    velocity = _get_velocity_from_timestamp(file, t_odom)
+                    velocity = _get_velocity_from_timestamp(str(file), t_odom)
 
-                    if filter_static and velocity == 0:
+                    if (
+                        filter_static
+                        and velocity < params.dataset.LINEAR_VELOCITY_THR
+                    ):
                         continue
 
                 bridge = cv_bridge.CvBridge()
@@ -1023,48 +1040,44 @@ class DatasetBuilder:
 # The "__main__" flag acts as a shield to avoid these lines to be executed if
 # this file is imported in another one
 if __name__ == "__main__":
-    dataset = DatasetBuilder(
-        name="tmp_multimodal_formula_png_no_sand_filtered_hard_higher_T_no_trajectory_limit_large_patch_no_coherence_no_cohesion_null_speed_hand_filtered"
-    )
+    dataset = DatasetBuilder(name="remove_me")
 
-    (
-        raw_imu,
-        velocities,
-        source_bagfiles,
-    ) = dataset.write_images_and_compute_features(
+    # fmt: off
+    (raw_imu, velocities, source_bagfiles) = dataset.write_images_and_compute_features(
         files=[
             ## Grass and roal only
-            # "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
-            # "bagfiles/raw_bagfiles/Terrains_Samples/grass_medium.bag",
-            # "bagfiles/raw_bagfiles/Terrains_Samples/road_easy.bag",
-            # "bagfiles/raw_bagfiles/Terrains_Samples/road_medium.bag",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/grass_medium.bag",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/road_easy.bag",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/road_medium.bag",
             ## No sand
-            "bagfiles/raw_bagfiles/Terrains_Samples/dust.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_easy.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_medium.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_stones_branches.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves_branches.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/grass_medium.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/gravel_easy.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/gravel_medium.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/road_easy.bag",
-            "bagfiles/raw_bagfiles/Terrains_Samples/road_medium.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/dust.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_easy.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_medium.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/forest_dirt_stones_branches.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/forest_leaves_branches.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/grass_easy.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/grass_medium.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/gravel_easy.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/gravel_medium.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/road_easy.bag",
+            PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/road_medium.bag",
             ## All
-            # "bagfiles/raw_bagfiles/Terrains_Samples/",
-            # "bagfiles/raw_bagfiles/ENSTA_Campus/",
-            # "bagfiles/raw_bagfiles/Palaiseau_Forest/",
-            # "bagfiles/raw_bagfiles/Troche/",
-            # "bagfiles/raw_bagfiles/Terrains_Samples/troche_forest_hard_2023-05-30-13-44-49_0.bag",
-            # "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
-            # "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-14-05-20_0.bag"
-            # "bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/ENSTA_Campus/",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Palaiseau_Forest/",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Troche/",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/troche_forest_hard_2023-05-30-13-44-49_0.bag",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-13-27-30_0.bag",
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/road1_2023-05-30-14-05-20_0.bag"
+            # PROJECT_PATH / "bagfiles/raw_bagfiles/Terrains_Samples/grass1_2023-05-30-13-56-09_0.bag"
         ],
         velocity_type=VelocityType.MANUAL,
         filter_coherence=False,
         filter_cohesion=False,
     )
+    # fmt: on
 
     dataset.write_traversal_costs(
         raw_imu,

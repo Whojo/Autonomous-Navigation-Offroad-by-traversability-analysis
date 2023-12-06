@@ -75,7 +75,7 @@ nb_centered_patch = 10
 
 # Threshold to filter SAM's segmentation based on its completeness
 # (i.e. the ratio of pixels included in at least one mask)
-completeness_threshold = 0.8
+completeness_threshold = 0.92
 
 ##########################################
 ## Features extraction from IMU signals ##
