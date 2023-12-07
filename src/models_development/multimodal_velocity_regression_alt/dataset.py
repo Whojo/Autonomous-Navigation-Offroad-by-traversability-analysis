@@ -1,21 +1,19 @@
 import os
 import pandas as pd
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader, Subset
+from torch.utils.data import Dataset
 import torch
 import numpy as np
 
 from torchvision import transforms
-from sklearn.model_selection import train_test_split
 
 from pathlib import Path
 
-from models_development.multimodal_velocity_regression_alt.custom_transforms import (
-    Cutout,
-    Shadowcasting,
+from utils.dataset import (
+    DEFAULT_IMAGE_AUGMENTATION_TRANSFORM,
+    DEFAULT_AUGMENTATION_TRANSFORM,
+    DEFAULT_MULTIMODAL_TRANSFORM,
 )
-import params.learning
-from params.learning import NORMALIZE_PARAMS, LEARNING
 
 
 class TraversabilityDataset(Dataset):
@@ -121,47 +119,12 @@ class TraversabilityDataset(Dataset):
         return multimodal_image, traversal_cost, linear_velocity
 
 
-DEFAULT_IMAGE_AUGMENTATION_TRANSFORM = transforms.Compose(
-    [
-        transforms.GaussianBlur(3),
-        transforms.GaussianBlur(7),
-        transforms.GaussianBlur(13),
-        Cutout(),
-        Shadowcasting(),
-    ]
-)
-
-DEFAULT_AUGMENTATION_TRANSFORM = augmentation_transforms = transforms.Compose(
-    [
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
-        transforms.RandomRotation(30),
-        transforms.RandomResizedCrop(
-            params.learning.IMAGE_SHAPE,
-            scale=(0.2, 1.0),
-            ratio=(3, 3),
-            antialias=True,
-        ),
-    ]
-)
-
-# DEFAULT_MULTIMODAL_TRANSFORM = transforms.Resize(
-#     params.learning.IMAGE_SHAPE, antialias=True
-# )
-DEFAULT_MULTIMODAL_TRANSFORM = transforms.Compose(
-    [
-        transforms.Resize(params.learning.IMAGE_SHAPE, antialias=True),
-        transforms.Normalize(**NORMALIZE_PARAMS),
-    ]
-)
-
-
 def get_sets(
     dataset: Path,
     *,
-    image_augmentation_transform: callable,
-    augmentation_transform: callable,
-    multimodal_transform: callable,
+    image_augmentation_transform: callable = DEFAULT_IMAGE_AUGMENTATION_TRANSFORM,
+    augmentation_transform: callable = DEFAULT_AUGMENTATION_TRANSFORM,
+    multimodal_transform: callable = DEFAULT_MULTIMODAL_TRANSFORM,
 ) -> (Dataset, Dataset, Dataset):
     """
     Returns trianing set, validation set and test set.
@@ -203,82 +166,3 @@ def get_sets(
     )
 
     return train_set, val_set, test_set
-
-
-def _set_to_loader(
-    set: Dataset,
-    *,
-    shuffle: bool = True,
-    batch_size: int = LEARNING["batch_size"],
-) -> DataLoader:
-    """Return a DataLoader for a given dataset
-
-    Args:
-        set (Dataset): Dataset to load
-        shuffle (bool, optional): Whether to shuffle the data. Defaults to
-            True.
-        batch_size (int, optional): Size of the batch. Defaults to
-            LEARNING["batch_size"].
-
-    Returns:
-        DataLoader: DataLoader for the given dataset
-    """
-    return DataLoader(
-        set,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=12,  # Asynchronous data loading and augmentation
-        pin_memory=True,  # Increase the transferring speed of the data to the GPU
-    )
-
-
-def get_dataloader(
-    dataset: Path,
-    *,
-    image_augmentation_transform: callable = DEFAULT_IMAGE_AUGMENTATION_TRANSFORM,
-    augmentation_transform: callable = DEFAULT_AUGMENTATION_TRANSFORM,
-    multimodal_transform: callable = DEFAULT_MULTIMODAL_TRANSFORM,
-    batch_size: int = LEARNING["batch_size"],
-) -> (DataLoader, DataLoader, DataLoader):
-    """
-    Returns train, validation and test dataloaders for the given dataset.
-
-    Args:
-    - dataset (Path): Path to the dataset.
-    - image_augmentation_transform (callable): Transform to apply to the image
-        and only for the training set. Defaults to
-        DEFAULT_IMAGE_AUGMENTATION_TRANSFORM.
-    - augmentation_transform (callable): Transform to apply to the multimodal
-        image and only for the training set. Defaults to
-        DEFAULT_AUGMENTATION_TRANSFORM.
-    - multimodal_transform (callable): Transform to apply to the multimodal
-        image on all sets. Defaults to DEFAULT_MULTIMODAL_TRANSFORM.
-    - batch_size (int): Size of the batch. Defaults to
-        LEARNING["batch_size"].
-
-    Returns:
-    - Tuple[DataLoader, DataLoader, DataLoader]: A tuple containing train,
-          validation and test dataloaders.
-    """
-    train_set, val_set, test_set = get_sets(
-        dataset,
-        image_augmentation_transform=image_augmentation_transform,
-        augmentation_transform=augmentation_transform,
-        multimodal_transform=multimodal_transform,
-    )
-
-    train_size = params.learning.TRAIN_SIZE / (1 - params.learning.TEST_SIZE)
-    train_indices, val_indices = train_test_split(
-        range(len(train_set)), train_size=train_size
-    )
-
-    train_set = Subset(train_set, train_indices)
-    val_set = Subset(val_set, val_indices)
-
-    train_loader = _set_to_loader(train_set, batch_size=batch_size)
-    val_loader = _set_to_loader(val_set, batch_size=batch_size)
-    test_loader = _set_to_loader(
-        test_set, shuffle=False, batch_size=batch_size
-    )
-
-    return train_loader, val_loader, test_loader

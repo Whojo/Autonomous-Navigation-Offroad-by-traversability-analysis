@@ -5,6 +5,7 @@ from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
 
 from functools import reduce, lru_cache
 from pathlib import Path
+from enum import Enum
 
 from utils.model import get_model_input
 from utils.grid import get_grid_lists
@@ -16,6 +17,8 @@ from data_preparation.create_dataset import (
 from models_development.multimodal_velocity_regression_alt.model import (
     ResNet18Velocity_Regression_Alt,
 )
+
+TargetType = Enum("TargetType", ["FULL_SEGMENTATION", "COSTMAP", "BOTH"])
 
 
 @lru_cache(maxsize=1)
