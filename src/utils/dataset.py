@@ -22,7 +22,7 @@ DEFAULT_IMAGE_AUGMENTATION_TRANSFORM = transforms.Compose(
     ]
 )
 
-DEFAULT_AUGMENTATION_TRANSFORM = augmentation_transforms = transforms.Compose(
+DEFAULT_AUGMENTATION_TRANSFORM = transforms.Compose(
     [
         transforms.RandomHorizontalFlip(),
         transforms.RandomVerticalFlip(),

@@ -1,17 +1,16 @@
 import torch
 from torchvision import transforms
 from torch.utils.data import Dataset
-
-from PIL import Image
-from pathlib import Path
 import numpy as np
+from PIL import Image
 
-from sam_pipeline_utils import TargetType
-from utils.dataset import (
-    DEFAULT_IMAGE_AUGMENTATION_TRANSFORM,
-    DEFAULT_AUGMENTATION_TRANSFORM,
-    DEFAULT_MULTIMODAL_TRANSFORM,
-)
+from pathlib import Path
+from enum import Enum
+
+from utils.dataset import DEFAULT_IMAGE_AUGMENTATION_TRANSFORM
+
+
+InputType = Enum("InputType", ["RGB", "RGBD"])
 
 
 def _read_PIL_image(path: Path) -> Image:
@@ -30,9 +29,9 @@ class SegmentationDataset(Dataset):
         dir: Path,
         train: bool = True,
         image_transform: callable = None,
+        geometric_transform: callable = None,
         multimodal_transform: callable = None,
-        target_type: TargetType = TargetType.COSTMAP,
-        troncate: bool = True,
+        input_type: InputType = InputType.RGB,
     ):
         """
         Initialize the Dataset object.
@@ -41,25 +40,25 @@ class SegmentationDataset(Dataset):
             dir (str): The directory path of the dataset.
             image_transform (callable, optional): Transforms to be applied on a
                 rdg image. Defaults to None.
+            geometric_transform (callable, optional): Transforms to be
+                applied on the multimodal image and the target, as geometric
+                properties should be kept between these for the segmentation
+                task. Defaults to None.
             multimodal_transform (callable, optional): Transforms to be
                 applied on the multimodal image. Defaults to None.
             train (bool, optional): Whether to use the training dataset.
                 Defaults to True.
-            target_type (TargetType, optional): The type of target data.
-                Can be TargetType.FULL_SEGMENTATION, TargetType.COSTMAP,
-                or TargetType.BOTH. Defaults to TargetType.COSTMAP.
-            troncate (bool, optional): Whether to truncate the top half
-                of the images. This is can be relevant as target
-                segmentation are only computed for the bottom half of the
-                images. Defaults to True.
+            input_type (InputType, optional): The type of input data.
+                Can be InputType.RGB, InputType.RGBD. Defaults to
+                InputType.RGB.
         """
         self.dataset_dir = dir
         self.image_dir = dir / "images"
         self.image_transform = image_transform
+        self.geometric_transform = geometric_transform
         self.multimodal_transform = multimodal_transform
 
-        self.target_type = target_type
-        self.troncate = troncate
+        self.input_type = input_type
 
         idx_file = "train_idx.npy" if train else "test_idx.npy"
         self.indexes = np.load(dir / idx_file)
@@ -86,66 +85,87 @@ class SegmentationDataset(Dataset):
         img_idx = self.indexes[idx]
 
         image = _read_PIL_image(self.image_dir / f"{img_idx:05d}.png")
-        depth = _read_PIL_image(self.image_dir / f"{img_idx:05d}d.png")
-        normal = _read_PIL_image(self.image_dir / f"{img_idx:05d}n.png")
-        target = self._read_target(img_idx)
-
-        if self.troncate:
-            half_height = image.size[1] // 2
-            crop_box = (0, half_height, image.size[0], image.size[1])
-
-            image = image.crop(crop_box)
-            depth = depth.crop(crop_box)
-            normal = normal.crop(crop_box)
-
-            if self.target_type == TargetType.FULL_SEGMENTATION:
-                target = target[half_height:, :]
-
-            if self.target_type == TargetType.BOTH:
-                seg, costmap = target
-                seg = seg[half_height:, :]
-                target = (seg, costmap)
-
         if self.image_transform:
             image = self.image_transform(image)
 
         image = transforms.ToTensor()(image)
-        depth = transforms.ToTensor()(depth)
-        normal = transforms.ToTensor()(normal)
 
-        multimodal = torch.cat((image, depth, normal), dim=0).float()
+        if self.input_type == InputType.RGB:
+            multimodal = image.float()
+        elif self.input_type == InputType.RGBD:
+            depth = _read_PIL_image(self.image_dir / f"{img_idx:05d}d.png")
+            normal = _read_PIL_image(self.image_dir / f"{img_idx:05d}n.png")
+
+            depth = transforms.ToTensor()(depth)
+            normal = transforms.ToTensor()(normal)
+
+            multimodal = torch.cat((image, depth, normal), dim=0).float()
+
         if self.multimodal_transform:
             multimodal = self.multimodal_transform(multimodal)
+
+        target = self._read_target(img_idx)
+        if self.geometric_transform:
+            all_data = torch.cat((multimodal, target), dim=0)
+            all_data = self.geometric_transform(all_data)
+
+            multimodal = all_data[: multimodal.shape[0]]
+            target = all_data[-1]
 
         return multimodal, target
 
     def _read_target(self, idx):
-        if self.target_type in (TargetType.FULL_SEGMENTATION, TargetType.BOTH):
-            seg = np.losad(self.dataset_dir / "targets" / f"{idx:05d}_seg.npy")
-            seg = transforms.ToTensor()(seg)
+        seg = np.load(self.dataset_dir / "targets" / f"{idx:05d}.npy")
+        return transforms.ToTensor()(seg)
 
-        if self.target_type in (TargetType.COSTMAP, TargetType.BOTH):
-            costmap = np.load(
-                self.dataset_dir / "targets" / f"{idx:05d}_costmap.npy"
+
+SEG_SIZE = (180, 320)
+DEFAULT_SEG_GEOMETRIC_AUGMENTATION_TRANSFORM = transforms.Compose(
+    [
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.RandomRotation(30),
+        transforms.RandomResizedCrop(
+            SEG_SIZE,
+            scale=(0.2, 1.0),
+            antialias=True,
+        ),
+    ]
+)
+
+# Must adapt the multimodal transform to the semantic segmentation task
+DEFAULT_SEG_GEOMETRIC_TRANSFORM = transforms.Compose(
+    [
+        transforms.Resize(SEG_SIZE, antialias=True),
+        transforms.Lambda(
+            lambda img: transforms.functional.crop(
+                img,
+                top=SEG_SIZE[0] // 2,
+                left=0,
+                height=SEG_SIZE[0] // 2,
+                width=SEG_SIZE[1],
             )
-            costmap = transforms.ToTensor()(costmap)
+        ),
+    ]
+)
 
-        if self.target_type == TargetType.BOTH:
-            return (seg, costmap)
-        elif self.target_type == TargetType.FULL_SEGMENTATION:
-            return seg
-        elif self.target_type == TargetType.COSTMAP:
-            return costmap
-        else:
-            raise ValueError(f"Unknown target type: {self.target_type}")
+DEFAULT_SEG_MULTIMODAL_TRANSFORM = transforms.Compose(
+    [
+        # transforms.Normalize(
+        #     mean=[], # TODO
+        #     std=[], # TODO
+        # )
+    ]
+)
 
 
 def get_sets(
     dataset_dir: Path,
     *,
     image_augmentation_transform: callable = DEFAULT_IMAGE_AUGMENTATION_TRANSFORM,
-    augmentation_transform: callable = DEFAULT_AUGMENTATION_TRANSFORM,
-    multimodal_transform: callable = DEFAULT_MULTIMODAL_TRANSFORM,
+    geometric_augmentation_transform: callable = DEFAULT_SEG_GEOMETRIC_AUGMENTATION_TRANSFORM,
+    geometric_transform: callable = DEFAULT_SEG_GEOMETRIC_TRANSFORM,
+    multimodal_transform: callable = DEFAULT_SEG_MULTIMODAL_TRANSFORM,
     **kwargs,
 ) -> (Dataset, Dataset, Dataset):
     """
@@ -153,16 +173,25 @@ def get_sets(
 
     Args:
         dataset_dir (Path): The directory containing the dataset.
-        image_augmentation_transform (callable, optional): The image
-            augmentation transform function. Defaults to
+        image_augmentation_transform (callable, optional): Data Augmentation
+            transforms to be applied on a rdg image. Defaults to
             DEFAULT_IMAGE_AUGMENTATION_TRANSFORM.
-        augmentation_transform (callable, optional): The augmentation
-            transform function. Defaults to DEFAULT_AUGMENTATION_TRANSFORM.
-        multimodal_transform (callable, optional): The multimodal transform
-            function. Defaults to DEFAULT_MULTIMODAL_TRANSFORM.
-        **kwargs: Additional keyword arguments for SegmentationDataset.
-            either target_type or troncate. Refer to SegmentationDataset
-            for more information.
+        geometric_augmentation_transform (callable, optional): Data
+            Augmentation transforms to be applied on the multimodal image and
+            the target, as geometric properties should be kept between these
+            for the segmentation task. Defaults to
+            DEFAULT_SEG_GEOMETRIC_AUGMENTATION_TRANSFORM.
+        geometric_transform (callable, optional): Transforms to be
+            applied on the multimodal image and the target, as geometric
+            properties should be kept between these for the segmentation
+            task. Defaults to DEFAULT_SEG_GEOMETRIC_TRANSFORM.
+        multimodal_transform (callable, optional): Transforms to be
+            applied on the multimodal image. Defaults to
+            DEFAULT_SEG_MULTIMODAL_TRANSFORM.
+
+        **kwargs: Additional keyword arguments for SegmentationDataset
+            (e.g. input_type). Refer to SegmentationDataset for more
+            information.
 
     Returns:
         Tuple[Dataset, Dataset, Dataset]: A tuple containing the train,
@@ -172,9 +201,10 @@ def get_sets(
         dataset_dir,
         train=True,
         image_transform=image_augmentation_transform,
-        multimodal_transform=transforms.Compose(
-            [augmentation_transform, multimodal_transform]
+        geometric_transform=transforms.Compose(
+            [geometric_transform, geometric_augmentation_transform]
         ),
+        multimodal_transform=multimodal_transform,
         **kwargs,
     )
 
@@ -182,6 +212,7 @@ def get_sets(
         dataset_dir,
         train=True,
         image_transform=None,
+        geometric_transform=geometric_transform,
         multimodal_transform=multimodal_transform,
         **kwargs,
     )
@@ -190,6 +221,7 @@ def get_sets(
         dataset_dir,
         train=False,
         image_transform=None,
+        geometric_transform=geometric_transform,
         multimodal_transform=multimodal_transform,
         **kwargs,
     )
