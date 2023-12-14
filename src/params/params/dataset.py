@@ -60,6 +60,12 @@ weight_path = (
     / "src/models_development/multimodal_velocity_regression_alt/logs/_post_hp_tuning_data_augmentation/network.params"
 )
 
+# Number of rows (from the top) to be removed from the input image
+# for the semantic segmentation. This is due to the fact that they are not
+# used when converted to the costmap Hence, it is relevant to remove them from
+# the input image for optimization purposes.
+TOP_UNUSED_ROWS = 500 / 1080
+
 # Stability score threshold for the semantic segmentation mask with Segment
 # Anything model
 stability_score_thresh = 0.8

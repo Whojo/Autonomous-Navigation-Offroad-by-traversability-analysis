@@ -7,6 +7,7 @@ from functools import reduce, lru_cache
 from pathlib import Path
 from enum import Enum
 
+from params.dataset import TOP_UNUSED_ROWS
 from utils.model import get_model_input
 from utils.grid import get_grid_lists
 import params.dataset
@@ -115,8 +116,8 @@ def _get_segmentation_bottom_half(segmentation: np.array) -> np.array:
     (i.e. the part of the image projected into the costmap).
     """
     bottom_mask = np.zeros_like(segmentation, dtype=bool)
-    half_height = segmentation.shape[0] // 2
-    bottom_mask[half_height:, :] = 1
+    unused_height = int(segmentation.shape[0] * TOP_UNUSED_ROWS)
+    bottom_mask[unused_height:, :] = 1
 
     return segmentation & bottom_mask
 

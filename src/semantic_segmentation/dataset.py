@@ -4,9 +4,11 @@ from torch.utils.data import Dataset
 import numpy as np
 from PIL import Image
 
+from math import floor, ceil
 from pathlib import Path
 from enum import Enum
 
+from params.dataset import TOP_UNUSED_ROWS
 from utils.dataset import DEFAULT_IMAGE_AUGMENTATION_TRANSFORM
 
 
@@ -141,9 +143,9 @@ DEFAULT_SEG_GEOMETRIC_TRANSFORM = transforms.Compose(
         transforms.Lambda(
             lambda img: transforms.functional.crop(
                 img,
-                top=SEG_SIZE[0] // 2,
+                top=floor(SEG_SIZE[0] * TOP_UNUSED_ROWS),
                 left=0,
-                height=SEG_SIZE[0] // 2,
+                height=ceil(SEG_SIZE[0] * (1 - TOP_UNUSED_ROWS)),
                 width=SEG_SIZE[1],
             )
         ),
