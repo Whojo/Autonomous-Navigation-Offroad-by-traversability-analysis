@@ -54,6 +54,7 @@ class SegmentationDataset(Dataset):
         """
         self.dataset_dir = dir
         self.image_dir = dir / "images"
+
         self.image_transform = image_transform
         self.geometric_transform = geometric_transform
         self.multimodal_transform = multimodal_transform
@@ -197,13 +198,17 @@ def get_sets(
         Tuple[Dataset, Dataset, Dataset]: A tuple containing the train,
             validation, and test sets.
     """
+    all_geometric_transform = []
+    if geometric_augmentation_transform:
+        all_geometric_transform.append(geometric_augmentation_transform)
+    if geometric_transform:
+        all_geometric_transform.append(geometric_transform)
+
     train_set = SegmentationDataset(
         dataset_dir,
         train=True,
         image_transform=image_augmentation_transform,
-        geometric_transform=transforms.Compose(
-            [geometric_transform, geometric_augmentation_transform]
-        ),
+        geometric_transform=transforms.Compose(all_geometric_transform),
         multimodal_transform=multimodal_transform,
         **kwargs,
     )
