@@ -5,19 +5,18 @@ from random import randint
 
 def difference(red_band, green_band, blue_band, x1, y1, x2, y2):
     return sqrt(
-        (red_band[y1, x1] - red_band[y2, x2]) ** 2 +\
-            (green_band[y1, x1] - green_band[y2, x2]) ** 2 +\
-                (blue_band[y1, x1] - blue_band[y2, x2]) ** 2
+        (red_band[y1, x1] - red_band[y2, x2]) ** 2
+        + (green_band[y1, x1] - green_band[y2, x2]) ** 2
+        + (blue_band[y1, x1] - blue_band[y2, x2]) ** 2
     )
+
 
 def difference_(red_band, green_band, blue_band, x1, y1, x2, y2):
-    return - (
-        (red_band[y1, x1]*red_band[y2, x2]) +\
-            (green_band[y1, x1]*green_band[y2, x2]) +\
-                (blue_band[y1, x1]*blue_band[y2, x2]) 
+    return -(
+        (red_band[y1, x1] * red_band[y2, x2])
+        + (green_band[y1, x1] * green_band[y2, x2])
+        + (blue_band[y1, x1] * blue_band[y2, x2])
     )
-
-
 
 
 def get_random_rgb_image():
@@ -33,6 +32,7 @@ def get_random_gray_image():
     gray[0] = randint(0, 255)
     return gray
 
+
 def convolve(src, mask):
     output = np.zeros(shape=src.shape, dtype=float)
     height, width = src.shape
@@ -41,8 +41,7 @@ def convolve(src, mask):
         for x in range(width):
             sum = float(mask[0] * src[y, x])
             for i in range(1, length):
-                sum += mask[i] * (
-                    src[y, max(x - i, 0)] + src[y, min(x + i, width - 1)])
+                sum += mask[i] * (src[y, max(x - i, 0)] + src[y, min(x + i, width - 1)])
             output[y, x] = sum
     return output
 
@@ -68,14 +67,11 @@ def make_gaussian_filter(sigma):
         mask[i] = exp(-0.5 * pow(i / sigma, i / sigma))
     return mask
 
+
 class DisjointSet:
-    
     def __init__(self, n_elements):
         self.num = n_elements
-        self.elements = np.empty(
-            shape=(n_elements, 3),
-            dtype=int
-        )
+        self.elements = np.empty(shape=(n_elements, 3), dtype=int)
         for i in range(n_elements):
             self.elements[i, 0] = 0
             self.elements[i, 1] = 1
@@ -105,8 +101,9 @@ class DisjointSet:
                 self.elements[y, 0] += 1
         self.num -= 1
 
+
 def segment_graph(num_vertices, num_edges, edges, c):
-    edges[0 : num_edges, :] = edges[edges[0 : num_edges, 2].argsort()]
+    edges[0:num_edges, :] = edges[edges[0:num_edges, 2].argsort()]
     u = DisjointSet(num_vertices)
     threshold = np.zeros(shape=num_vertices, dtype=float)
     for i in range(num_vertices):
@@ -138,32 +135,40 @@ def segment(in_image, sigma=0.8, k=1, min_size=20):
                 edges[num, 0] = int(y * width + x)
                 edges[num, 1] = int(y * width + (x + 1))
                 edges[num, 2] = difference(
-                    smooth_red_band, smooth_green_band,
-                    smooth_blue_band, x, y, x + 1, y
+                    smooth_red_band, smooth_green_band, smooth_blue_band, x, y, x + 1, y
                 )
                 num += 1
             if y < height - 1:
                 edges[num, 0] = int(y * width + x)
                 edges[num, 1] = int((y + 1) * width + x)
                 edges[num, 2] = difference(
-                    smooth_red_band, smooth_green_band,
-                    smooth_blue_band, x, y, x, y + 1
+                    smooth_red_band, smooth_green_band, smooth_blue_band, x, y, x, y + 1
                 )
                 num += 1
             if (x < width - 1) and (y < height - 2):
                 edges[num, 0] = int(y * width + x)
                 edges[num, 1] = int((y + 1) * width + (x + 1))
                 edges[num, 2] = difference(
-                    smooth_red_band, smooth_green_band,
-                    smooth_blue_band, x, y, x + 1, y + 1
+                    smooth_red_band,
+                    smooth_green_band,
+                    smooth_blue_band,
+                    x,
+                    y,
+                    x + 1,
+                    y + 1,
                 )
                 num += 1
             if (x < width - 1) and (y > 0):
                 edges[num, 0] = int(y * width + x)
                 edges[num, 1] = int((y - 1) * width + (x + 1))
                 edges[num, 2] = difference(
-                    smooth_red_band, smooth_green_band,
-                    smooth_blue_band, x, y, x + 1, y - 1
+                    smooth_red_band,
+                    smooth_green_band,
+                    smooth_blue_band,
+                    x,
+                    y,
+                    x + 1,
+                    y - 1,
                 )
                 num += 1
     u = segment_graph(width * height, num, edges, k)
