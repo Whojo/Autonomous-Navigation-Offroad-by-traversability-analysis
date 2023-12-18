@@ -2,8 +2,6 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import train_test_split
 
-from pathlib import Path
-
 from models_development.multimodal_velocity_regression_alt.custom_transforms import (
     Cutout,
     Shadowcasting,
@@ -66,6 +64,7 @@ def _set_to_loader(
         set,
         batch_size=batch_size,
         shuffle=shuffle,
+        persistent_workers=True,
         num_workers=12,  # Asynchronous data loading and augmentation
         pin_memory=True,  # Increase the transferring speed of the data to the GPU
     )
