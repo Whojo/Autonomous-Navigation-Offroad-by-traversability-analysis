@@ -74,7 +74,7 @@ In VSCode this can easily be done with the "Python: Select Interpreter" command 
 Lastly, if you intend to use Notebooks directly from VSCode, first, you should select the same interpreter as well, but also correctly configure ROS Noetic for this purpose (as explained in the [ROS Noetic installation procedure](http://wiki.ros.org/noetic/Installation/Ubuntu)).
 The following command does the tricks:
 ```sh
-echo "source /opt/ros/noetic/setup.bash" >> .bashrc
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 ```
 
 # Tests
