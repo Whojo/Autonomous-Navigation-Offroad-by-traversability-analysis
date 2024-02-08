@@ -59,6 +59,11 @@ You might need to update the `LD_LIBRARY_PATH` environment variable to make sure
 echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/noetic/lib/' >> ~/.bashrc
 ```
 
+Some matplotlib's figure require a latex package. This one can easily be installed as follows:
+```sh
+sudo apt install texlive-full
+```
+
 ## Weights for the semantic segmentation
 To successfully use the semantic segmentation module, you would need to have Segment Anything's weights in "semantic_segmentation/models/" folder. These can be downloaded from [here](https://github.com/facebookresearch/segment-anything#model-checkpoints). If you only want to use `sam_vit_h.pth` (which is the largest SAM's model and the one we used), please download it [here](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pt.h).
 
