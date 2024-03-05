@@ -54,6 +54,16 @@ poetry install
 
 Do not hesitate to learn more about poetry [here](https://python-poetry.org/docs/basic-usage/).
 
+You might need to update the `LD_LIBRARY_PATH` environment variable to make sure that the `cv_bridge` package can be found by ROS. To do so, run the following command and reboot:
+```sh
+echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/noetic/lib/' >> ~/.bashrc
+```
+
+Some matplotlib's figure require a latex package. This one can easily be installed as follows:
+```sh
+sudo apt install texlive-full
+```
+
 ## Weights for the semantic segmentation
 To successfully use the semantic segmentation module, you would need to have Segment Anything's weights in "semantic_segmentation/models/" folder. These can be downloaded from [here](https://github.com/facebookresearch/segment-anything#model-checkpoints). If you only want to use `sam_vit_h.pth` (which is the largest SAM's model and the one we used), please download it [here](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pt.h).
 
@@ -66,14 +76,11 @@ echo "$(poetry show -v | head -n 1)/bin/python"
 In VSCode this can easily be done with the "Python: Select Interpreter" command from the "Command Palette" (Ctrl+Shift+P) in which you can paste the previously mentionned path (more information [here](https://code.visualstudio.com/docs/python/environments#_working-with-python-interpreters)).
 
 
-Lastly, if you intend to use Notebooks directly from VSCode, first, you should select the same interpreter as well, but also correctly configure ROS Noetic for this purpose.
+Lastly, if you intend to use Notebooks directly from VSCode, first, you should select the same interpreter as well, but also correctly configure ROS Noetic for this purpose (as explained in the [ROS Noetic installation procedure](http://wiki.ros.org/noetic/Installation/Ubuntu)).
 The following command does the tricks:
 ```sh
-echo "source /opt/ros/noetic/setup.bash" >> .profile
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 ```
-
-This adds the ROS environment setup step in the .profile script (which is executed at login) rather than in .bashrc (as the default [ROS Noetic installation procedure](http://wiki.ros.org/noetic/Installation/Ubuntu) advises, but which would then not be run for VSCode's notebook). Don't forget to restart your computer in order for the changes to take effect.
-
 
 # Tests
 You can easily run the tests by running the following command in the root folder of the project:

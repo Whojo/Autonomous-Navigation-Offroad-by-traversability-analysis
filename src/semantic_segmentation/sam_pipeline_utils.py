@@ -5,7 +5,9 @@ from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
 
 from functools import reduce, lru_cache
 from pathlib import Path
+from enum import Enum
 
+from params.dataset import TOP_UNUSED_ROWS
 from utils.model import get_model_input
 from utils.grid import get_grid_lists
 import params.dataset
@@ -16,6 +18,8 @@ from data_preparation.create_dataset import (
 from models_development.multimodal_velocity_regression_alt.model import (
     ResNet18Velocity_Regression_Alt,
 )
+
+CostType = Enum("CostType", ["DEFAULT", "CENTERED", "IQM_CENTERED"])
 
 
 @lru_cache(maxsize=1)
@@ -112,8 +116,8 @@ def _get_segmentation_bottom_half(segmentation: np.array) -> np.array:
     (i.e. the part of the image projected into the costmap).
     """
     bottom_mask = np.zeros_like(segmentation, dtype=bool)
-    half_height = segmentation.shape[0] // 2
-    bottom_mask[half_height:, :] = 1
+    unused_height = int(segmentation.shape[0] * TOP_UNUSED_ROWS)
+    bottom_mask[unused_height:, :] = 1
 
     return segmentation & bottom_mask
 
@@ -374,17 +378,7 @@ def filter_intersection(masks: list) -> list:
     return exclusive_masks
 
 
-def _non_nul_max(x: np.array) -> float:
-    x = x[x != 0]
-    if len(x) == 0:
-        return 0
-
-    return np.max(x)
-
-
-def downsample_to_grid(
-    img: np.array, *, downsampling_fct=_non_nul_max
-) -> np.array:
+def downsample_to_grid(img: np.array, *, downsampling_fct=np.max) -> np.array:
     """
     Project a grid onto an image and downsample the image to this grid
     resolution in order to produce a low-resolution bird-eye view. This
@@ -394,7 +388,7 @@ def downsample_to_grid(
         img (np.array): The input image to downsample and project.
         downsampling_fct (function, optional): The downsampling function to
             apply to each patch in order to convert it into a single pixel.
-            Defaults to `_non_nul_max`.
+            Defaults to `np.max`.
 
     Returns:
         np.array: A low-resolution and bird-eye view version of the input
@@ -418,7 +412,9 @@ def downsample_to_grid(
             pxls = img[poly_mask == True]
             grid[x, y] = downsampling_fct(pxls)
 
-    return grid
+    # XXX: Reverse the grid to have the same orientation as the image.
+    # => prevent refactoring the `get_grid_lists` function.
+    return grid[::-1, :]
 
 
 def fill_segmentation(masks: list) -> list:
@@ -474,3 +470,70 @@ def fill_segmentation(masks: list) -> list:
 
     complete_segmentation_list.extend(masks_to_process)
     return complete_segmentation_list
+
+
+def _get_cost_from_type(
+    mask: dict,
+    image: np.array,
+    depth: np.array,
+    normal: np.array,
+    cost_type: CostType,
+):
+    cost_dict = {
+        CostType.DEFAULT: get_cost,
+        CostType.CENTERED: get_center_cost,
+        CostType.IQM_CENTERED: get_iqm_center_cost,
+    }
+    if cost_type not in cost_dict:
+        raise ValueError(f"Unknown cost type {cost_type}")
+
+    return cost_dict[cost_type](mask, image, depth, normal)
+
+
+def _compute_cost_on_masks(
+    masks: list,
+    image: np.array,
+    depth: np.array,
+    normal: np.array,
+    *,
+    cost_type: CostType,
+) -> np.array:
+    semantic_segmentation = np.zeros_like(depth, dtype=np.float32)
+    for mask in masks:
+        seg = mask["segmentation"]
+        cost = _get_cost_from_type(mask, image, depth, normal, cost_type)
+
+        if cost is None:
+            continue
+        semantic_segmentation[seg] = cost
+
+    return semantic_segmentation
+
+
+def compute_semantic_segmentation(
+    image: np.array,
+    depth: np.array,
+    normal: np.array,
+    *,
+    should_fill_segmentation: bool,
+    cost_type: CostType,
+    should_filter_intersection: bool,
+    completeness_threshold: float,
+) -> np.array:
+    mask_generator = get_mask_generator()
+    masks = mask_generator.generate(image)
+    if (
+        completeness_threshold > 0
+        and compute_completeness(masks) < completeness_threshold
+    ):
+        return None
+
+    if should_filter_intersection:
+        masks = filter_intersection(masks)
+
+    if should_fill_segmentation:
+        masks = fill_segmentation(masks)
+
+    return _compute_cost_on_masks(
+        masks, image, depth, normal, cost_type=cost_type
+    )
