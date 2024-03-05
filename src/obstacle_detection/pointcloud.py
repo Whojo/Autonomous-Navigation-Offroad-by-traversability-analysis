@@ -9,7 +9,7 @@ import os
 
 # print(os.popen("pwd").read())
 
-import params.params.robot 
+import params.robot
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import proj3d
@@ -18,7 +18,8 @@ from umap.umap_ import UMAP
 
 THRESH_HEIGHT = 10  # find a value that works.
 
-robot_params = params.params.robot
+robot_params = params.robot
+
 
 def depthimage_to_pointcloud(depth_img, K=robot_params.K, as_list=True):
     depth = depth_img / 255
@@ -56,42 +57,58 @@ def visualise_pointcloud(cloud):
     plt.ylabel("y")
     plt.show()
 
+
 def visualise_pointcloud_plotly(cloud, rgb=None):
     # fig = px.scatter_3d(x = after_nmf[:, 0], y = after_nmf[:, 1], z = after_nmf[:, 2], color = algo_nmf.predict(X_test))
-    if rgb is None: fig = px.scatter_3d(x=cloud[:, 0], y=cloud[:, 1], z=cloud[:, 2])
+    if rgb is None:
+        fig = px.scatter_3d(x=cloud[:, 0], y=cloud[:, 1], z=cloud[:, 2])
     else:
-        fig = px.scatter_3d(x=cloud[:, 0], y=cloud[:, 1], z=cloud[:, 2]``)
-    fig.update_traces(marker_size = 2)
+        fig = px.scatter_3d(x=cloud[:, 0], y=cloud[:, 1], z=cloud[:, 2])
+    fig.update_traces(marker_size=2)
     fig.show()
 
 
 def plane_distance(pt, ref, normal):
     assert np.linalg.norm(normal) == 1
-    return np.abs(np.dot(pt-ref, normal))
+    return np.abs(np.dot(pt - ref, normal))
+
 
 class RansacSegmentation:
-    def __init__(self, pointcloud, cos_thresh=0.1, ref_normal=np.array([0, 0, 1])):
+    def __init__(
+        self,
+        pointcloud,
+        cos_thresh=0.1,
+        ref_normal=np.array([0, 0, 1]),
+        stopping_limit=0.2,
+    ):
         """
         pointcloud : Nx3 ndarray
         ref_normal : 3x1 ndarray
+        stopping_limit : fraction of points in the pointcloud at which ransac can be terminated
         """
         self.pointcloud = pointcloud
         self.ref_normal = ref_normal
         self.inliers = None
         self.outliers = None
         self.cos_dist_thresh = cos_thresh
-        self.reference_thresh = np.cos(4*np.pi/18) # 40 deg
+        self.reference_thresh = np.cos(4 * np.pi / 18)  # 40 deg
+
+        self.stopping_limit = pointcloud.shape[0] * stopping_limit
 
         self.rng = np.random.default_rng()
 
-    def cosine_dist(self, x, normal, ref):
+    def distance(self, point):
+        return np.abs(np.dot(point - self.ref_point, self.normal))
+
+    def dist(self, x, normal, ref, use_cosine=False):
         x = x - ref
-        x = x / max(1e-4, np.linalg.norm(x))
+        if use_cosine:
+            x = x / np.linalg.norm(x)
         return np.abs(np.dot(x, normal))
 
     def fit(
         self,
-        max_iter=100,
+        runs=100,
         dist_threshold=0.1,
     ):
         """
@@ -101,21 +118,30 @@ class RansacSegmentation:
         """
         inliers_result = set()
 
-        for _ in range(max_iter):
-            p1, p2, p3 = self.rng.choice(self.pointcloud, 3, replace=False)
-            inliers = [p1, p2, p3]
+        for i in range(10000):
+            # p1, p2, p3 = self.rng.choice(self.pointcloud, 3, replace=False)
+            # inliers = [p1, p2, p3]
+
+            p1, p2, p3 = self.rng.choice(len(self.pointcloud), 3, replace=False)
+            inliers = [self.pointcloud[p1], self.pointcloud[p2], self.pointcloud[p3]]
+            p1, p2, p3 = inliers
 
             normal = np.cross(p2 - p1, p3 - p1)
-            normal = normal / max(1e-4, np.linalg.norm(normal))
+            normal = normal / np.linalg.norm(normal)
 
             if np.dot(normal, self.ref_normal) < self.reference_thresh:
                 continue
 
             for point in self.pointcloud:
-                if point in inliers:
-                    continue
+                point = np.array(point)
+                # try:
+                #     if point in inliers:
+                #         continue
+                # except:
+                #     print(point)
+                #     continue
 
-                d = self.cosine_dist(point, normal, p1)
+                d = self.dist(point, normal, p1, use_cosine=False)
 
                 if d < self.cos_dist_thresh:
                     inliers.append(point)
@@ -123,5 +149,10 @@ class RansacSegmentation:
             if len(inliers) > len(inliers_result):
                 inliers_result.clear()
                 inliers_result = inliers
+                self.ref_point = p1
+                self.normal = normal
+
+            if len(inliers_result) > self.stopping_limit:
+                break
 
         return inliers_result

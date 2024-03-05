@@ -16,8 +16,8 @@ a1.imshow(img)
 a2.imshow(depth)
 a3.imshow(norm)
 # !pwd
-import params.params.robot
-K = params.params.robot.K
+import params.robot
+K = params.robot.K
 
 K
 fx, fy, cx, cy = K[0,0], K[1, 1], K[0, 2], K[1, 2]
