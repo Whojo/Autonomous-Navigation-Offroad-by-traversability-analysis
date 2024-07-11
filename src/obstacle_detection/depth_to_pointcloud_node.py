@@ -31,14 +31,14 @@ def depth_to_pointcloud_(depth_image):
     # input()
     return pointcloud_msg
 
-def depth_image_callback_(depth_image):
+def depth_image_callback(depth_image):
     print("Depth image received.")
     # input()
     pointcloud_msg = depth_to_pointcloud_(depth_image)
     pointcloud_pub.publish(pointcloud_msg)
 
 
-def depth_image_callback(depth_image):
+def depth_image_callback_(depth_image):
     print("Depth image received.")
     depth_image = bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
     # depth_image = np.array(depth_image, dtype=np.uint8)

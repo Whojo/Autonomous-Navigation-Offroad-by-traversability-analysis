@@ -25,10 +25,12 @@ DEPTH_RANGE = [0.7, 7]
 def depthimage_to_pointcloud(depth_img, K=robot_params.K, as_list=True):
     print(np.unique(depth_img, return_counts=True))
     depth_img[depth_img == np.inf] = np.nan
-    depth = depth_img / 255.0
-    depth_mask = np.where(depth>0, 1, -1)
-    depth = np.where(depth_mask>0, DEPTH_RANGE[0]+(depth*(DEPTH_RANGE[1]-DEPTH_RANGE[0])), np.nan)
-    return depth_to_pointcloud(depth, K, as_list)
+    # print(np.max(depth_img[~np.isnan(depth_img)]), np.min(depth_img[~np.isnan(depth_img)]))
+    # input()
+    # depth = depth_img / 255.0
+    # depth_mask = np.where(depth>0, 1, -1)
+    # depth = np.where(depth_mask>0, DEPTH_RANGE[0]+(depth*(DEPTH_RANGE[1]-DEPTH_RANGE[0])), np.nan)
+    return depth_to_pointcloud(depth_img, K, as_list)
 
 
 def depth_to_pointcloud(depth, K=robot_params.K, as_list=True):
