@@ -14,6 +14,8 @@ src/traversal_cost/datasets
 logs/
 logs_optuna*/
 data_Arnaud/
+IROS2024_Ours_SAM_results/
+
 
 # poetry config
 poetry.toml
