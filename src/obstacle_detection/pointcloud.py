@@ -14,15 +14,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import proj3d
 import plotly.express as px
-from umap.umap_ import UMAP
+
+# from umap.umap_ import UMAP
 
 THRESH_HEIGHT = 10  # find a value that works.
 
 robot_params = params.robot
-
+DEPTH_RANGE = [0.7, 7]
 
 def depthimage_to_pointcloud(depth_img, K=robot_params.K, as_list=True):
-    depth = depth_img / 255
+    print(np.unique(depth_img, return_counts=True))
+    depth_img[depth_img == np.inf] = np.nan
+    depth = depth_img / 255.0
+    depth_mask = np.where(depth>0, 1, -1)
+    depth = np.where(depth_mask>0, DEPTH_RANGE[0]+(depth*(DEPTH_RANGE[1]-DEPTH_RANGE[0])), np.nan)
     return depth_to_pointcloud(depth, K, as_list)
 
 
@@ -34,13 +39,15 @@ def depth_to_pointcloud(depth, K=robot_params.K, as_list=True):
     fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
     rows, cols = depth.shape
     valid = ~np.isnan(depth)
+    print(f"valid ; {np.unique(valid, return_counts=True)}")
     z = np.where(valid, depth, np.nan)
     c, r = np.meshgrid(np.arange(cols), np.arange(rows), sparse=True)
     x = np.where(valid, z * (c - cx) / fx, np.nan)
     y = np.where(valid, z * (r - cy) / fy, np.nan)
 
     cloud = np.dstack((x, y, z))
-
+    cloud = cloud[valid]
+    print(cloud.shape)
     # cloud = cloud[~np.isnan(cloud)]
 
     return cloud
