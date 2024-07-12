@@ -23,7 +23,6 @@ robot_params = params.robot
 DEPTH_RANGE = [0.7, 7]
 
 def depthimage_to_pointcloud(depth_img, K=robot_params.K, as_list=True):
-    print(np.unique(depth_img, return_counts=True))
     depth_img[depth_img == np.inf] = np.nan
     # print(np.max(depth_img[~np.isnan(depth_img)]), np.min(depth_img[~np.isnan(depth_img)]))
     # input()
@@ -41,7 +40,6 @@ def depth_to_pointcloud(depth, K=robot_params.K, as_list=True):
     fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
     rows, cols = depth.shape
     valid = ~np.isnan(depth)
-    print(f"valid ; {np.unique(valid, return_counts=True)}")
     z = np.where(valid, depth, np.nan)
     c, r = np.meshgrid(np.arange(cols), np.arange(rows), sparse=True)
     x = np.where(valid, z * (c - cx) / fx, np.nan)
@@ -49,7 +47,6 @@ def depth_to_pointcloud(depth, K=robot_params.K, as_list=True):
 
     cloud = np.dstack((x, y, z))
     cloud = cloud[valid]
-    print(cloud.shape)
     # cloud = cloud[~np.isnan(cloud)]
 
     return cloud
