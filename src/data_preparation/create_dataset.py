@@ -57,13 +57,15 @@ from functools import lru_cache
 
 # Custom modules and packages
 import utilities.frames as frames
-from depth.utils import Depth
-import traversalcost.utils
-import traversalcost.traversal_cost
+from depth.depth.utils import Depth
+import traversal_cost.traversalcost.utils
+import traversal_cost.traversalcost.traversal_cost
 import params.robot
 import params.dataset
 import params.traversal_cost
 import params.learning
+
+from obstacle_detection.utils import calc_obstacle_costs
 
 from params import PROJECT_PATH
 
@@ -354,7 +356,7 @@ def get_patch_dimension(all_points: np.array) -> RectangleDim:
 def raw_imu_to_features(
     raw_imu_line: dict,
 ) -> np.array:
-    return traversalcost.utils.get_features(
+    return traversal_cost.traversalcost.utils.get_features(
         raw_imu_line["roll"],
         raw_imu_line["pitch"],
         raw_imu_line["vertical_acceleration"],
@@ -456,6 +458,8 @@ class DatasetBuilder:
         velocities = []
         raw_imu = []
         source_bagfiles = []
+        elevation_costs = []
+        inclination_costs = []
 
         index_image = 0
         bridge = cv_bridge.CvBridge()
@@ -722,6 +726,12 @@ class DatasetBuilder:
                         bilateral_filter=params.dataset.BILATERAL_FILTER,
                         gradient_threshold=params.dataset.GRADIENT_THR,
                     )
+                    
+                    ## TODO : compute point cloud, better? normals
+                    elevation_cost, inclination_cost = calc_obstacle_costs(image_to_save, depth_image_crop)
+
+                    elevation_costs.append(np.max(elevation_cost))
+                    inclination_costs.append(np.max(inclination_cost))
 
                     # depth.display_depth()
                     # depth.display_normal()
@@ -810,7 +820,7 @@ class DatasetBuilder:
 
             bag.close()
 
-        return raw_imu, velocities, source_bagfiles
+        return raw_imu, velocities, source_bagfiles, elevation_costs, inclination_costs #, ... TODO : calc heightmap, normals
 
     def compute_siamese_traversal_costs(self, raw_imu: list) -> np.array:
         """
@@ -826,11 +836,11 @@ class DatasetBuilder:
             np.array: Traversal costs.
         """
         features = np.array(list(map(raw_imu_to_features, raw_imu)))
-        model = traversalcost.traversal_cost.SiameseNetwork(
+        model = traversal_cost.traversalcost.traversal_cost.SiameseNetwork(
             input_size=features.shape[1],
         )
 
-        return traversalcost.traversal_cost.apply_model(
+        return traversal_cost.traversalcost.traversal_cost.apply_model(
             features=features,
             model=model,
             params=params.dataset.SIAMESE_PARAMS,
@@ -891,10 +901,12 @@ class DatasetBuilder:
         raw_imu: list,
         velocities: list,
         source_bagfiles: list,
-        *,
+        elevation_costs: list,
+        inclination_costs: list,
         cost_type: CostType = CostType.SIAMESE,
     ) -> None:
         """
+        **** TODO
         Write the traversal costs in a csv file.
 
         Args:
@@ -902,6 +914,8 @@ class DatasetBuilder:
                 dict_keys(['roll', 'pitch', 'vertical_acceleration'])
             velocities (list): A list of velocities.
             source_bagfiles (list): A list of source bagfiles.
+            elevation_costs (list) : 
+            inclination_costs(list) : 
             cost_type (CostType): The type of traversal cost to compute.
                 SIAMESE: compute the traversal cost using a Siamese Network model.
                 FORMULA: compute the traversal cost using a manually defined formula
@@ -931,7 +945,7 @@ class DatasetBuilder:
         for i in range(costs.shape[0]):
             image_name = f"{i:05d}"
 
-            cost = costs[i, 0]
+            cost = costs[i, 0] + elevation_costs[i] + inclination_costs[i] # TODO: Add height and angle penalties
             label = labels[i, 0]
             linear_velocity = velocities[i]
             source_bagfile = source_bagfiles[i]

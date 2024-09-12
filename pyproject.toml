@@ -52,9 +52,12 @@ python-gnupg = "^0.5.1"
 segment-anything = {git = "https://github.com/facebookresearch/segment-anything.git"}
 rospkg = "^1.5.0"
 plotly = "^5.18.0"
-nbformat = "4.2.0"
+nbformat = ">=5.7.0"
 scikit-image = "^0.22.0"
-
+open3d-ros-helper = "^0.2.0.3"
+open3d = "^0.18.0"
+addict = "^2.4.0"
+umap = "^0.1.1"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.26.0"

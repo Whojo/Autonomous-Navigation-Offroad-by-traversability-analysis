@@ -14,6 +14,11 @@ src/traversal_cost/datasets
 logs/
 logs_optuna*/
 data_Arnaud/
+IROS2024_Ours_SAM_results/
+
+
+# poetry config
+poetry.toml
 
 # VSCode specific
 .vscode/
@@ -27,3 +32,6 @@ settings.json
 *.params
 *.npy
 trace*.json
+
+docs/
+anotaenv/
